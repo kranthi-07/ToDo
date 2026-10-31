@@ -1,19 +1,14 @@
 {
-  "name": "ToDo – Smart Productivity",
-  "short_name": "ToDo",
-  "description": "Manage your task lists and upcoming purchases in one place",
+  "name": "List Do – Smart Productivity",
+  "short_name": "List Do",
+  "description": "Organize your life, task lists, and upcoming purchases effortlessly.",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#100D1F",
+  "background_color": "#F7F6FF",
   "theme_color": "#5B21B6",
   "icons": [
-    {
-      "src": "icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    },
     {
       "src": "icon-192.png",
       "sizes": "192x192",
@@ -25,30 +20,27 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
-    }
-  ],
-  "screenshots": [
+    },
     {
-      "src": "./",
-      "sizes": "430x932",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "ToDo Dashboard"
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ],
   "categories": ["productivity", "utilities"],
   "shortcuts": [
     {
-      "name": "New Task",
-      "short_name": "Task",
+      "name": "My Lists",
+      "short_name": "Lists",
       "url": "./",
-      "description": "Open ToDo and add a task"
+      "description": "View all task lists"
     },
     {
       "name": "Upcoming Buys",
       "short_name": "Buys",
       "url": "./",
-      "description": "View your upcoming purchases"
+      "description": "View upcoming purchases and budgets"
     }
   ]
 }

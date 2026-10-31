@@ -24,25 +24,33 @@ const CAT_LABELS = {
   education:'📚 Study', electronics:'💻 Tech', clothing:'👕 Wear',
   food:'🍔 Food', home:'🏠 Home', sports:'⚽ Sports', other:'🎁 Other',
 };
+const CAT_LABELS_CLIP = {
+  study:'📚 Study', tech:'💻 Tech', college:'🎓 College',
+  motivation:'🔥 Motivation', other:'✨ Other'
+};
 const PRI_ORDER = { high:0, medium:1, low:2 };
 
 /* ── State ── */
-let state = { lists:[], buys:[], settings:{ darkMode:false } };
+let state = { lists:[], buys:[], clips:[], settings:{ darkMode:false } };
 
 /* UI state */
 let currentListId = null;
 let editListId    = null;
 let editTaskId    = null;
 let editBuyId     = null;
+let editClipId    = null;
 let taskFilter    = 'all';
 let buyCat        = 'all';
 let buyFilter     = 'all';
 let buySort       = 'date';
+let clipCat       = 'all';
+let clipType      = 'all';
 let selColor      = LIST_COLORS[0].id;
 let selEmoji      = EMOJIS[0];
 let selPriTask    = 'medium';
 let selPriBuy     = 'medium';
 let selCatBuy     = 'education';
+let selCatClip    = 'study';
 let toastTm       = null;
 
 /* ── Utils ── */
@@ -82,6 +90,7 @@ function load() {
   } catch(_) {}
   state.lists    = state.lists    || [];
   state.buys     = state.buys     || [];
+  state.clips    = state.clips    || [];
   state.settings = state.settings || { darkMode:false };
 }
 
@@ -96,7 +105,75 @@ function toast(msg) {
   clearTimeout(toastTm);
   toastTm = setTimeout(()=>el.classList.remove('show'), 2400);
 }
-function vibe() { try { navigator.vibrate && navigator.vibrate(30); } catch(_){} }
+function vibe(pattern = 30) {
+  try { if (navigator.vibrate) navigator.vibrate(pattern); } catch(_) {}
+}
+
+/* ══════════════════════════════════
+   CELEBRATION CONFETTI
+══════════════════════════════════ */
+let confettiParticles = [];
+let confettiAnimId = null;
+
+function celebrateConfetti(count = 60) {
+  const canvas = $('confetti-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const colors = ['#7C3AED', '#5B21B6', '#10B981', '#059669', '#F59E0B', '#EF4444', '#3B82F6', '#EC4899'];
+  for (let i = 0; i < count; i++) {
+    confettiParticles.push({
+      x: window.innerWidth * (0.2 + Math.random() * 0.6),
+      y: window.innerHeight * 0.45 + (Math.random() * 60 - 30),
+      w: Math.random() * 8 + 6,
+      h: Math.random() * 6 + 4,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      vx: (Math.random() - 0.5) * 16,
+      vy: -(Math.random() * 12 + 6),
+      rot: Math.random() * 360,
+      vrot: (Math.random() - 0.5) * 12,
+      opacity: 1,
+      decay: Math.random() * 0.012 + 0.012
+    });
+  }
+
+  if (!confettiAnimId) {
+    runConfettiAnim(canvas, ctx);
+  }
+}
+
+function runConfettiAnim(canvas, ctx) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  confettiParticles = confettiParticles.filter(p => p.opacity > 0 && p.y < canvas.height + 25);
+
+  confettiParticles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.35;
+    p.vx *= 0.98;
+    p.rot += p.vrot;
+    p.opacity -= p.decay;
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate((p.rot * Math.PI) / 180);
+    ctx.globalAlpha = Math.max(0, p.opacity);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+    ctx.restore();
+  });
+
+  if (confettiParticles.length > 0) {
+    confettiAnimId = requestAnimationFrame(() => runConfettiAnim(canvas, ctx));
+  } else {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    confettiAnimId = null;
+  }
+}
 
 /* ── Theme ── */
 function applyTheme(dark) {
@@ -116,7 +193,7 @@ function toggleTheme() {
    NAVIGATION
 ══════════════════════════════════ */
 function showView(name) {
-  ['home','lists','detail','buys'].forEach(v => {
+  ['home','lists','detail','buys','clips'].forEach(v => {
     const el = $('view-'+v);
     if (el) el.classList.toggle('active', v===name);
   });
@@ -134,6 +211,7 @@ function showView(name) {
 function goHome()  { showView('home');  renderHome(); }
 function goLists() { showView('lists'); renderLists(); }
 function goBuys()  { showView('buys');  renderBuys(); }
+function goClips() { showView('clips'); renderClips(); }
 function goDetail(id) {
   currentListId=id; taskFilter='all';
   // reset tabs
@@ -185,12 +263,13 @@ function renderHome() {
   // Stats
   const sl=$('sp-lists'); if(sl) sl.textContent=state.lists.length;
   const st=$('sp-tasks'); if(st) st.textContent=totalTasks;
-  const sd=$('sp-done');  if(sd) sd.textContent=doneToday;
   const sb=$('sp-buys');  if(sb) sb.textContent=pendingBuys.length;
+  const sc=$('sp-clips'); if(sc) sc.textContent=state.clips.length;
 
   // Quick tiles
   const qlm=$('qc-lists-meta'); if(qlm) qlm.textContent=`${state.lists.length} list${state.lists.length!==1?'s':''}`;
   const qbm=$('qc-buys-meta');  if(qbm) qbm.textContent=`${fmtR(totalBudget)} planned`;
+  const qcm=$('qc-clips-meta'); if(qcm) qcm.textContent=`${state.clips.length} saved video${state.clips.length!==1?'s':''}`;
 
   // High priority tasks
   const highTasks = state.lists
@@ -241,6 +320,30 @@ function renderHome() {
           <div class="prev-price">${b.price>0?fmtR(b.price):'—'}</div>`;
         el.addEventListener('click',()=>goBuys());
         hbEl.appendChild(el);
+      });
+    }
+  }
+
+  // Recent clips
+  const recentClips = state.clips.slice(0, 3);
+  const hcEl = $('home-clips');
+  if (hcEl) {
+    hcEl.innerHTML = '';
+    if (recentClips.length === 0) {
+      hcEl.innerHTML = '<p class="preview-empty">No saved clips yet — paste a YouTube or Insta link!</p>';
+    } else {
+      recentClips.forEach(c => {
+        const el = document.createElement('div');
+        el.className = 'prev-card';
+        const icon = c.type === 'youtube' ? '▶' : c.type === 'instagram' ? '📸' : '🌐';
+        el.innerHTML = `
+          <div class="prev-card-body">
+            <div class="prev-name">${icon} ${esc(c.caption || c.url)}</div>
+            <div class="prev-meta">${CAT_LABELS_CLIP[c.category] || '✨ Other'} · ${fmtTimeAgo(c.createdAt)}</div>
+          </div>
+          <a href="${esc(c.url)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;font-weight:700;color:var(--brand);text-decoration:none;padding:5px 9px;background:var(--surface-2);border-radius:6px;border:1px solid var(--border);" onclick="event.stopPropagation()">Open ↗</a>`;
+        el.addEventListener('click', () => goClips());
+        hcEl.appendChild(el);
       });
     }
   }
@@ -402,8 +505,9 @@ function renderBuys() {
   if (empty) empty.style.display='none';
 
   buys.forEach(buy=>{
+    const isAfforded = allocatedBuyIds.has(buy.id);
     const card=document.createElement('div');
-    card.className=`buy-card${buy.bought?' bought-card':''}`;
+    card.className=`buy-card${buy.bought?' bought-card':''}${isAfforded?' afforded':''}`;
     card.dataset.pri=buy.priority;
     card.innerHTML=`
       <button class="check-btn${buy.bought?' chk-done':''}" data-id="${esc(buy.id)}" aria-label="Toggle bought"></button>
@@ -413,6 +517,7 @@ function renderBuys() {
         <div class="buy-tags">
           <span class="cat-tag">${CAT_LABELS[buy.category]||'🎁 Other'}</span>
           <span class="ptag ptag-${buy.priority}">${buy.priority.charAt(0).toUpperCase()+buy.priority.slice(1)}</span>
+          ${isAfforded?`<span class="afford-tag">✨ In Budget</span>`:''}
         </div>
       </div>
       <div class="buy-right">
@@ -468,8 +573,17 @@ function toggleTask(tid){
   const l=getList(currentListId); if(!l)return;
   const t=l.tasks.find(x=>x.id===tid); if(!t)return;
   t.done=!t.done; t.doneAt=t.done?Date.now():null;
-  save(); vibe(); renderDetail();
-  if(t.done) toast('Task completed 🎉');
+  save(); vibe(t.done?[40,50,40]:30); renderDetail();
+  if(t.done) {
+    const allDone = l.tasks.length>0 && l.tasks.every(x=>x.done);
+    if(allDone) {
+      celebrateConfetti(85);
+      toast('All tasks completed! Fantastic job! 🏆');
+    } else {
+      celebrateConfetti(45);
+      toast('Task completed 🎉');
+    }
+  }
 }
 function deleteTask(tid){
   const l=getList(currentListId); if(!l)return;
@@ -490,12 +604,551 @@ function updateBuy(id,name,price,category,priority,note){
 function toggleBuy(id){
   const b=state.buys.find(x=>x.id===id); if(!b)return;
   b.bought=!b.bought; b.boughtAt=b.bought?Date.now():null;
-  save(); vibe(); renderBuys();
-  if(b.bought) toast('Marked as bought 🎉');
+  if(b.bought && allocatedBuyIds.has(id)) {
+    allocatedBuyIds.delete(id);
+  }
+  save(); vibe(b.bought?[40,50,40]:30); renderBuys();
+  if(b.bought) {
+    celebrateConfetti(65);
+    toast('Marked as bought 🎉');
+  }
 }
 function deleteBuy(id){
   state.buys=state.buys.filter(x=>x.id!==id);
+  if(allocatedBuyIds.has(id)) allocatedBuyIds.delete(id);
   save(); renderBuys(); toast('Item removed 🗑️');
+}
+
+/* ══════════════════════════════════
+   SHARE: LIST & BUYS
+══════════════════════════════════ */
+async function shareText(title, text) {
+  vibe(40);
+  if (navigator.share) {
+    try {
+      await navigator.share({ title, text });
+      return;
+    } catch (e) {
+      if (e.name !== 'AbortError') console.warn('Share error:', e);
+    }
+  }
+
+  // Fallback: Copy to clipboard & open WhatsApp
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('Copied list! Opening WhatsApp… 📋');
+  } catch (_) {
+    toast('Opening WhatsApp… 💬');
+  }
+  const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+  window.open(waUrl, '_blank');
+}
+
+function shareCurrentList() {
+  const l = getList(currentListId);
+  if (!l) return;
+  const tasks = l.tasks || [];
+  const doneCount = tasks.filter(t => t.done).length;
+
+  let msg = `${l.emoji} *${l.name}* (List Do)\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+  if (tasks.length === 0) {
+    msg += `(No tasks added yet)\n`;
+  } else {
+    tasks.forEach(t => {
+      const box = t.done ? '✅' : '⬜';
+      const due = t.dueDate ? ` (📅 ${t.dueDate})` : '';
+      msg += `${box} ${t.text}${due}\n`;
+    });
+  }
+  msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+  msg += `Progress: ${doneCount}/${tasks.length} completed\n`;
+  msg += `Organized with List Do ✅`;
+
+  shareText(`${l.name} - List Do`, msg);
+}
+
+function shareBuysList() {
+  const pending = state.buys.filter(b => !b.bought);
+  const total = pending.reduce((s, b) => s + (b.price || 0), 0);
+
+  let msg = `🛍️ *My Upcoming Buys* (List Do)\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+  if (pending.length === 0) {
+    msg += `(All planned items have been bought! 🎉)\n`;
+  } else {
+    pending.forEach(b => {
+      const cat = CAT_LABELS[b.category] || '🎁 Other';
+      const price = b.price > 0 ? fmtR(b.price) : 'Unpriced';
+      msg += `• *${b.name}* — ${price} [${cat}]\n`;
+    });
+  }
+  msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+  msg += `Total Planned: ${fmtR(total)} (${pending.length} items)\n`;
+  msg += `Planned with List Do 💰`;
+
+  shareText(`Upcoming Buys - List Do`, msg);
+}
+
+/* ══════════════════════════════════
+   SMART BUDGET ALLOCATOR
+══════════════════════════════════ */
+let allocatedBuyIds = new Set();
+let lastAllocatedBudget = 0;
+
+function calculateBudgetAllocation() {
+  vibe(30);
+  const inp = $('inp-allocator');
+  const amount = parseFloat(inp?.value);
+  if (!amount || amount <= 0) {
+    toast('Please enter a valid amount in ₹ 💰');
+    return;
+  }
+
+  const pending = state.buys.filter(b => !b.bought && b.price > 0);
+  if (pending.length === 0) {
+    toast('No pending priced items in your wishlist! Add items with prices first.');
+    return;
+  }
+
+  // High priority first, then medium, then low. Within same priority, lower price first!
+  pending.sort((a, b) => {
+    const pDiff = PRI_ORDER[a.priority] - PRI_ORDER[b.priority];
+    if (pDiff !== 0) return pDiff;
+    return a.price - b.price;
+  });
+
+  allocatedBuyIds.clear();
+  let remaining = amount;
+  let totalCost = 0;
+
+  for (const b of pending) {
+    if (b.price <= remaining) {
+      allocatedBuyIds.add(b.id);
+      remaining -= b.price;
+      totalCost += b.price;
+    }
+  }
+
+  lastAllocatedBudget = amount;
+  renderAllocatorResults(amount, totalCost, remaining, allocatedBuyIds.size);
+  renderBuys();
+  $('btn-clear-allocator')?.classList.remove('hidden');
+
+  if (allocatedBuyIds.size > 0) {
+    celebrateConfetti(45);
+    toast(`Found ${allocatedBuyIds.size} item(s) you can afford today! 🎉`);
+  } else {
+    toast(`No items fit within ${fmtR(amount)}. Try entering a higher amount!`);
+  }
+}
+
+function renderAllocatorResults(budget, totalCost, remaining, count) {
+  const res = $('allocator-results');
+  if (!res) return;
+  res.classList.remove('hidden');
+
+  if (count === 0) {
+    res.innerHTML = `
+      <div style="font-size:13px;color:var(--text-2);text-align:center;padding:4px 0;">
+        ⚠️ None of your pending items fit within <strong>${fmtR(budget)}</strong>.<br/>
+        <span style="font-size:11.5px;color:var(--text-3);margin-top:2px;display:inline-block;">Try entering a higher budget or adding smaller items!</span>
+      </div>`;
+    return;
+  }
+
+  res.innerHTML = `
+    <div class="ac-summary-row">
+      <div class="ac-summary-item">
+        <span class="ac-sum-num">${count}</span>
+        <span class="ac-sum-lbl">Affordable</span>
+      </div>
+      <div class="ac-summary-item">
+        <span class="ac-sum-num">${fmtR(totalCost)}</span>
+        <span class="ac-sum-lbl">Total Cost</span>
+      </div>
+      <div class="ac-summary-item">
+        <span class="ac-sum-num ac-sum-green">${fmtR(remaining)}</span>
+        <span class="ac-sum-lbl">Remaining</span>
+      </div>
+    </div>
+    <button class="ac-buy-all-btn" id="btn-buy-afforded">
+      🎉 Mark ${count} Afforded Item${count > 1 ? 's' : ''} as Bought
+    </button>`;
+
+  $('btn-buy-afforded')?.addEventListener('click', markAffordedAsBought);
+}
+
+function clearBudgetAllocation() {
+  allocatedBuyIds.clear();
+  lastAllocatedBudget = 0;
+  const inp = $('inp-allocator');
+  if (inp) inp.value = '';
+  $('allocator-results')?.classList.add('hidden');
+  $('btn-clear-allocator')?.classList.add('hidden');
+  renderBuys();
+}
+
+function markAffordedAsBought() {
+  const count = allocatedBuyIds.size;
+  if (count === 0) return;
+
+  state.buys.forEach(b => {
+    if (allocatedBuyIds.has(b.id)) {
+      b.bought = true;
+      b.boughtAt = Date.now();
+    }
+  });
+
+  clearBudgetAllocation();
+  save();
+  vibe([60, 60, 60]);
+  celebrateConfetti(95);
+  renderBuys();
+  toast(`Purchased ${count} item${count > 1 ? 's' : ''}! Enjoy your new stuff! 🛍️`);
+}
+
+/* ══════════════════════════════════
+   SAVED CLIPS & MEDIA (YouTube & Insta)
+══════════════════════════════════ */
+function fmtTimeAgo(ts) {
+  if (!ts) return 'recently';
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'Yesterday';
+  if (days < 30) return `${days}d ago`;
+  return new Date(ts).toLocaleDateString('en-IN', { month:'short', day:'numeric' });
+}
+
+function parseClipUrl(rawUrl) {
+  const url = String(rawUrl || '').trim();
+  if (!url) return null;
+
+  // YouTube match (watch, shorts, embed, youtu.be)
+  const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?.*v=|shorts\/|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i);
+  if (ytMatch && ytMatch[1]) {
+    const videoId = ytMatch[1];
+    const isShorts = url.includes('/shorts/');
+    return {
+      type: 'youtube',
+      isShorts,
+      videoId,
+      url: isShorts ? `https://www.youtube.com/shorts/${videoId}` : `https://www.youtube.com/watch?v=${videoId}`,
+      thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+      label: isShorts ? 'Shorts' : 'YouTube'
+    };
+  }
+
+  // Instagram Reel or Post match
+  const igMatch = url.match(/instagram\.com\/(?:reel|p|tv)\/([a-zA-Z0-9_-]+)/i);
+  if (igMatch && igMatch[1]) {
+    const reelId = igMatch[1];
+    const isReel = url.includes('/reel/');
+    return {
+      type: 'instagram',
+      isReel,
+      reelId,
+      url: `https://www.instagram.com/${isReel ? 'reel' : 'p'}/${reelId}/`,
+      thumbnail: null,
+      label: isReel ? 'Instagram Reel' : 'Instagram Post'
+    };
+  }
+
+  // General Web Link
+  try {
+    const u = new URL(url.startsWith('http') ? url : 'https://' + url);
+    return {
+      type: 'web',
+      url: u.href,
+      domain: u.hostname.replace(/^www\./, ''),
+      thumbnail: null,
+      label: 'Web Link'
+    };
+  } catch (_) {
+    return {
+      type: 'web',
+      url: url.startsWith('http') ? url : 'https://' + url,
+      domain: 'Link',
+      thumbnail: null,
+      label: 'Web Link'
+    };
+  }
+}
+
+function addClip(rawUrl, caption, category) {
+  const parsed = parseClipUrl(rawUrl);
+  if (!parsed) {
+    toast('Please enter a valid video or reel link! 🔗');
+    return false;
+  }
+
+  let defaultCap = caption?.trim();
+  if (!defaultCap) {
+    if (parsed.type === 'youtube') defaultCap = parsed.isShorts ? 'YouTube Short' : 'YouTube Video';
+    else if (parsed.type === 'instagram') defaultCap = parsed.isReel ? 'Instagram Reel' : 'Instagram Post';
+    else defaultCap = parsed.domain || 'Saved Link';
+  }
+
+  state.clips.unshift({
+    id: uid(),
+    url: parsed.url,
+    type: parsed.type,
+    isShorts: parsed.isShorts || false,
+    videoId: parsed.videoId || null,
+    reelId: parsed.reelId || null,
+    domain: parsed.domain || null,
+    thumbnail: parsed.thumbnail || null,
+    caption: defaultCap,
+    category: category || 'study',
+    createdAt: Date.now()
+  });
+
+  save();
+  vibe(40);
+  celebrateConfetti(40);
+  renderClips();
+  toast('Clip saved to your collection! 🎬');
+  return true;
+}
+
+function updateClip(id, rawUrl, caption, category) {
+  const c = state.clips.find(x => x.id === id);
+  if (!c) return;
+  const parsed = parseClipUrl(rawUrl);
+  if (parsed) {
+    c.url = parsed.url;
+    c.type = parsed.type;
+    c.isShorts = parsed.isShorts || false;
+    c.videoId = parsed.videoId || null;
+    c.reelId = parsed.reelId || null;
+    c.domain = parsed.domain || null;
+    c.thumbnail = parsed.thumbnail || null;
+  }
+  if (caption && caption.trim()) c.caption = caption.trim();
+  c.category = category || c.category;
+
+  save();
+  renderClips();
+  toast('Clip updated ✏️');
+}
+
+function deleteClip(id) {
+  state.clips = state.clips.filter(x => x.id !== id);
+  save();
+  renderClips();
+  toast('Clip removed 🗑️');
+}
+
+function renderClips() {
+  let clips = [...state.clips];
+  if (clipCat !== 'all') clips = clips.filter(c => c.category === clipCat);
+  if (clipType !== 'all') clips = clips.filter(c => c.type === clipType);
+
+  const q = $('search-clips')?.value.trim().toLowerCase() || '';
+  if (q) {
+    clips = clips.filter(c => (c.caption || '').toLowerCase().includes(q) || (c.url || '').toLowerCase().includes(q));
+  }
+
+  clips.sort((a, b) => b.createdAt - a.createdAt);
+
+  const counter = $('clips-counter');
+  if (counter) counter.textContent = `${clips.length} saved`;
+
+  const container = $('clips-container');
+  const empty = $('empty-clips');
+  if (!container) return;
+
+  container.querySelectorAll('.clip-card').forEach(e => e.remove());
+
+  if (clips.length === 0) {
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  clips.forEach(clip => {
+    const card = document.createElement('div');
+    card.className = `clip-card clip-${clip.type}`;
+    
+    let mediaHtml = '';
+    if (clip.type === 'youtube' && clip.thumbnail) {
+      mediaHtml = `
+        <div class="clip-media-wrap" data-url="${esc(clip.url)}">
+          <img class="clip-thumb" src="${esc(clip.thumbnail)}" alt="${esc(clip.caption)}" loading="lazy" onerror="this.src='icon-192.png'"/>
+          <div class="clip-badge badge-yt">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            <span>${clip.isShorts ? 'Shorts' : 'YouTube'}</span>
+          </div>
+          <div class="clip-play-btn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+          </div>
+        </div>`;
+    } else if (clip.type === 'instagram') {
+      mediaHtml = `
+        <div class="clip-media-wrap clip-media-ig" data-url="${esc(clip.url)}">
+          <div class="clip-badge badge-ig">📸 Instagram</div>
+          <div class="clip-ig-icon-wrap">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+          </div>
+          <span class="clip-ig-brand-text">${clip.isReel ? 'Watch Reel' : 'Instagram Post'}</span>
+        </div>`;
+    } else {
+      mediaHtml = `
+        <div class="clip-media-wrap clip-media-web" data-url="${esc(clip.url)}">
+          <div class="clip-badge badge-web">🌐 Link</div>
+          <span class="clip-web-icon">🔗</span>
+          <span class="clip-web-domain">${esc(clip.domain || 'External Website')}</span>
+        </div>`;
+    }
+
+    const watchBtnClass = clip.type === 'youtube' ? 'btn-yt' : clip.type === 'instagram' ? 'btn-ig' : '';
+    const watchLabel = clip.type === 'youtube' ? (clip.isShorts ? '▶ Watch Short' : '▶ Watch Video') : clip.type === 'instagram' ? '📸 Open Reel' : '🌐 Visit Link';
+
+    card.innerHTML = `
+      ${mediaHtml}
+      <div class="clip-content">
+        <div class="clip-caption">${esc(clip.caption || clip.url)}</div>
+        <div class="clip-meta-row">
+          <span class="clip-cat-tag">${CAT_LABELS_CLIP[clip.category] || '✨ Other'}</span>
+          <span class="clip-date">${fmtTimeAgo(clip.createdAt)}</span>
+        </div>
+        <div class="clip-action-bar">
+          <a href="${esc(clip.url)}" target="_blank" rel="noopener noreferrer" class="clip-watch-btn ${watchBtnClass}">
+            <span>${watchLabel}</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>
+          <div class="item-actions">
+            <button class="act-btn share-clip-btn" data-id="${esc(clip.id)}" aria-label="Share">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            </button>
+            <button class="act-btn edit-clip-btn" data-id="${esc(clip.id)}" aria-label="Edit">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
+            </button>
+            <button class="act-btn del del-clip-btn" data-id="${esc(clip.id)}" aria-label="Delete">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>`;
+
+    container.appendChild(card);
+  });
+
+  // Clicking thumbnail opens link
+  container.querySelectorAll('.clip-media-wrap').forEach(wrap => {
+    wrap.addEventListener('click', () => {
+      const u = wrap.dataset.url;
+      if (u) window.open(u, '_blank');
+    });
+  });
+
+  // Action listeners
+  container.querySelectorAll('.share-clip-btn').forEach(b => {
+    b.addEventListener('click', e => {
+      e.stopPropagation();
+      const c = state.clips.find(x => x.id === b.dataset.id);
+      if (c) {
+        shareText(c.caption, `🎬 *${c.caption}*\nWatch here: ${c.url}\n(Saved in List Do)`);
+      }
+    });
+  });
+
+  container.querySelectorAll('.edit-clip-btn').forEach(b => {
+    b.addEventListener('click', e => {
+      e.stopPropagation();
+      openEditClip(b.dataset.id);
+    });
+  });
+
+  container.querySelectorAll('.del-clip-btn').forEach(b => {
+    b.addEventListener('click', e => {
+      e.stopPropagation();
+      deleteClip(b.dataset.id);
+    });
+  });
+}
+
+function openNewClip() {
+  editClipId = null;
+  selCatClip = 'study';
+  $('mc-title').textContent = 'Save Video or Reel';
+  $('inp-clip-url').value = '';
+  $('inp-clip-caption').value = '';
+  $('btn-save-clip').textContent = 'Save Clip';
+  $('clip-modal-preview').classList.add('hidden');
+  $('clip-modal-preview').innerHTML = '';
+  buildCatClip('study');
+  $('modal-clip').showModal();
+  setTimeout(() => $('inp-clip-url').focus(), 150);
+}
+
+function openEditClip(id) {
+  const c = state.clips.find(x => x.id === id);
+  if (!c) return;
+  editClipId = id;
+  selCatClip = c.category;
+  $('mc-title').textContent = 'Edit Clip';
+  $('inp-clip-url').value = c.url;
+  $('inp-clip-caption').value = c.caption;
+  $('btn-save-clip').textContent = 'Save Changes';
+  updateModalPreview(c.url);
+  buildCatClip(c.category);
+  $('modal-clip').showModal();
+}
+
+function closeClipModal() {
+  $('modal-clip').close();
+  editClipId = null;
+}
+
+function saveClip() {
+  const url = $('inp-clip-url').value.trim();
+  if (!url) {
+    $('inp-clip-url').focus();
+    toast('Please paste a video or reel link');
+    return;
+  }
+  const cap = $('inp-clip-caption').value.trim();
+  closeClipModal();
+  if (editClipId) updateClip(editClipId, url, cap, selCatClip);
+  else addClip(url, cap, selCatClip);
+}
+
+function updateModalPreview(rawUrl) {
+  const box = $('clip-modal-preview');
+  if (!box) return;
+  const parsed = parseClipUrl(rawUrl);
+  if (!parsed) {
+    box.classList.add('hidden');
+    box.innerHTML = '';
+    return;
+  }
+  box.classList.remove('hidden');
+  if (parsed.type === 'youtube' && parsed.thumbnail) {
+    box.innerHTML = `<img src="${esc(parsed.thumbnail)}" alt="Preview" style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:8px;display:block;" onerror="this.style.display='none'"/>`;
+  } else if (parsed.type === 'instagram') {
+    box.innerHTML = `
+      <div style="background:linear-gradient(135deg,#833AB4,#FD1D1D,#F56040);padding:18px;text-align:center;color:#fff;border-radius:8px;font-weight:700;font-size:13px;">
+        📸 Instagram Reel detected!
+      </div>`;
+  } else {
+    box.innerHTML = `
+      <div style="background:var(--surface-2);padding:14px;text-align:center;color:var(--text-2);border-radius:8px;font-weight:600;font-size:13px;">
+        🌐 Web Link (${esc(parsed.domain || 'External Site')})
+      </div>`;
+  }
+}
+
+function buildCatClip(sel) {
+  selCatClip = sel || 'study';
+  document.querySelectorAll('#clip-modal-cat-picker .cat-opt').forEach(b => {
+    b.classList.toggle('active', b.dataset.ccat === selCatClip);
+  });
 }
 
 /* ══════════════════════════════════
@@ -678,6 +1331,10 @@ function doSearch(q){
     if(b.name.toLowerCase().includes(ql)||(b.note||'').toLowerCase().includes(ql))
       results.push({type:'buy',text:b.name,meta:`${CAT_LABELS[b.category]||'Other'} · ${fmtR(b.price)}`,sub:b.note});
   });
+  state.clips.forEach(c=>{
+    if((c.caption||'').toLowerCase().includes(ql)||(c.url||'').toLowerCase().includes(ql))
+      results.push({type:'clip',text:c.caption||c.url,meta:`🎬 ${CAT_LABELS_CLIP[c.category]||'Clip'}`,sub:c.url});
+  });
 
   if(results.length===0){ res.innerHTML='<p class="search-hint">No results found 😕</p>'; return; }
 
@@ -690,11 +1347,12 @@ function doSearch(q){
         <div class="prev-name">${esc(r.text)}</div>
         <div class="prev-meta">${esc(r.meta)}${r.sub?' · '+esc(r.sub):''}</div>
       </div>
-      <span style="font-size:11px;color:var(--text-3);flex-shrink:0">${r.type==='task'?'Task':'Buy'}</span>`;
+      <span style="font-size:11px;color:var(--text-3);flex-shrink:0">${r.type==='task'?'Task':r.type==='buy'?'Buy':'Clip'}</span>`;
     el.addEventListener('click',()=>{
       closeSearch();
       if(r.type==='task') goDetail(r.listId);
-      else goBuys();
+      else if(r.type==='buy') goBuys();
+      else goClips();
     });
     res.appendChild(el);
   });
@@ -711,12 +1369,14 @@ function bindAll() {
       if(v==='home') goHome();
       else if(v==='lists') goLists();
       else if(v==='buys') goBuys();
+      else if(v==='clips') goClips();
     });
   });
 
   // Home
   $('qc-lists')?.addEventListener('click',goLists);
   $('qc-buys')?.addEventListener('click',goBuys);
+  $('qc-clips')?.addEventListener('click',goClips);
   $('btn-search')?.addEventListener('click',openSearch);
   $('btn-darkmode')?.addEventListener('click',toggleTheme);
 
@@ -725,6 +1385,7 @@ function bindAll() {
 
   // Detail
   $('btn-back')?.addEventListener('click',goLists);
+  $('btn-share-list')?.addEventListener('click',shareCurrentList);
   $('btn-edit-list')?.addEventListener('click',()=>openEditList(currentListId));
   $('btn-del-list')?.addEventListener('click',()=>deleteList(currentListId));
   $('btn-new-task')?.addEventListener('click',openNewTask);
@@ -741,6 +1402,12 @@ function bindAll() {
 
   // Buys
   $('btn-new-buy')?.addEventListener('click',openNewBuy);
+  $('btn-share-buys')?.addEventListener('click',shareBuysList);
+
+  // Budget Allocator
+  $('btn-calc-allocator')?.addEventListener('click',calculateBudgetAllocation);
+  $('inp-allocator')?.addEventListener('keydown',e=>{ if(e.key==='Enter')calculateBudgetAllocation(); });
+  $('btn-clear-allocator')?.addEventListener('click',clearBudgetAllocation);
 
   // Category chips
   document.querySelectorAll('#cat-scroll .chip').forEach(b=>{
@@ -817,6 +1484,61 @@ function bindAll() {
   $('btn-cancel-search')?.addEventListener('click',closeSearch);
   $('search-global')?.addEventListener('input',e=>doSearch(e.target.value.trim()));
   $('modal-search')?.addEventListener('click',e=>{ if(e.target===$('modal-search'))closeSearch(); });
+
+  // Clips
+  $('btn-new-clip')?.addEventListener('click', openNewClip);
+  $('btn-quick-add-clip')?.addEventListener('click', () => {
+    const val = $('quick-clip-url')?.value.trim();
+    if (val && addClip(val, '', 'study')) {
+      $('quick-clip-url').value = '';
+    }
+  });
+  $('quick-clip-url')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const val = $('quick-clip-url')?.value.trim();
+      if (val && addClip(val, '', 'study')) {
+        $('quick-clip-url').value = '';
+      }
+    }
+  });
+
+  // Clip category chips
+  document.querySelectorAll('#clip-cat-scroll .chip').forEach(b => {
+    b.addEventListener('click', () => {
+      clipCat = b.dataset.ccat;
+      document.querySelectorAll('#clip-cat-scroll .chip').forEach(c => c.classList.remove('active'));
+      b.classList.add('active');
+      renderClips();
+    });
+  });
+
+  // Clip type tabs
+  document.querySelectorAll('#clip-type-tabs .tab').forEach(b => {
+    b.addEventListener('click', () => {
+      clipType = b.dataset.ctype;
+      document.querySelectorAll('#clip-type-tabs .tab').forEach(c => c.classList.remove('active'));
+      b.classList.add('active');
+      renderClips();
+    });
+  });
+
+  $('search-clips')?.addEventListener('input', () => renderClips());
+
+  // Clip modal
+  $('btn-cancel-clip')?.addEventListener('click', closeClipModal);
+  $('btn-save-clip')?.addEventListener('click', saveClip);
+  $('inp-clip-url')?.addEventListener('input', e => updateModalPreview(e.target.value.trim()));
+  $('inp-clip-url')?.addEventListener('keydown', e => { if (e.key === 'Enter') $('inp-clip-caption')?.focus(); });
+  $('inp-clip-caption')?.addEventListener('keydown', e => { if (e.key === 'Enter') saveClip(); });
+  $('modal-clip')?.addEventListener('click', e => { if (e.target === $('modal-clip')) closeClipModal(); });
+
+  document.querySelectorAll('#clip-modal-cat-picker .cat-opt').forEach(b => {
+    b.addEventListener('click', () => {
+      selCatClip = b.dataset.ccat;
+      document.querySelectorAll('#clip-modal-cat-picker .cat-opt').forEach(c => c.classList.remove('active'));
+      b.classList.add('active');
+    });
+  });
 }
 
 /* ══════════════════════════════════
@@ -828,27 +1550,36 @@ function initPWA() {
   // Register service worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('[SW] Registered:', reg.scope))
+      .then(reg => {
+        console.log('[SW] Registered:', reg.scope);
+        reg.update();
+      })
       .catch(err => console.warn('[SW] Registration failed:', err));
   }
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
   // Capture the install prompt event (Chrome / Edge / Android)
   window.addEventListener('beforeinstallprompt', e => {
     e.preventDefault();
     deferredInstallPrompt = e;
-
-    // Only show if user hasn't dismissed before
-    const dismissed = localStorage.getItem('pwa_dismissed');
-    if (!dismissed) {
-      setTimeout(() => showInstallBanner(), 3000); // show 3s after load
-    }
+    setTimeout(() => showInstallBanner(), 1500);
   });
 
-  // When the app is successfully installed, hide the banner
+  // Show banner on mobile/desktop after loading unless already in standalone mode
+  if (!isStandalone) {
+    const dismissed = localStorage.getItem('pwa_dismissed');
+    if (!dismissed) {
+      setTimeout(() => showInstallBanner(), 2200);
+    }
+  }
+
+  // When the app is successfully installed
   window.addEventListener('appinstalled', () => {
     hideInstallBanner();
     deferredInstallPrompt = null;
-    toast('ToDo installed on your device! 🎉');
+    toast('List Do installed on your device! 🎉');
   });
 
   // Offline / online detection
@@ -863,27 +1594,59 @@ function initPWA() {
   }
   window.addEventListener('online',  updateOnlineStatus);
   window.addEventListener('offline', updateOnlineStatus);
-  updateOnlineStatus(); // run once on load
+  updateOnlineStatus();
 
   // Banner button bindings
   $('ib-install')?.addEventListener('click', async () => {
-    if (!deferredInstallPrompt) return;
-    deferredInstallPrompt.prompt();
-    const { outcome } = await deferredInstallPrompt.userChoice;
-    if (outcome === 'accepted') {
-      toast('Installing ToDo… 🚀');
+    vibe();
+    if (deferredInstallPrompt) {
+      try {
+        deferredInstallPrompt.prompt();
+        const { outcome } = await deferredInstallPrompt.userChoice;
+        if (outcome === 'accepted') {
+          toast('Installing List Do… 🚀');
+          hideInstallBanner();
+        }
+        deferredInstallPrompt = null;
+      } catch (err) {
+        console.warn('Install prompt error:', err);
+        openInstallGuide(isIOS);
+      }
+    } else {
+      openInstallGuide(isIOS);
     }
-    deferredInstallPrompt = null;
-    hideInstallBanner();
   });
 
   $('ib-dismiss')?.addEventListener('click', () => {
     hideInstallBanner();
     localStorage.setItem('pwa_dismissed', '1');
   });
+
+  // Close guide
+  $('btn-close-guide')?.addEventListener('click', () => {
+    $('modal-install-guide')?.close();
+  });
+  $('modal-install-guide')?.addEventListener('click', e => {
+    if (e.target === $('modal-install-guide')) $('modal-install-guide').close();
+  });
+}
+
+function openInstallGuide(isIOS) {
+  const guide = $('modal-install-guide');
+  if (!guide) return;
+  if (isIOS) {
+    $('guide-ios')?.classList.remove('hidden');
+    $('guide-android')?.classList.add('hidden');
+  } else {
+    $('guide-ios')?.classList.add('hidden');
+    $('guide-android')?.classList.remove('hidden');
+  }
+  guide.showModal();
 }
 
 function showInstallBanner() {
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  if (isStandalone) return;
   const banner = $('install-banner');
   if (banner) banner.classList.remove('hidden');
 }

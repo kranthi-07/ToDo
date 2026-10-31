@@ -1,15 +1,18 @@
 // ═══════════════════════════════════════════
-//  ToDo — Service Worker  (sw.js)
-//  Caches all app assets for offline use
+//  List Do — Service Worker (sw.js)
+//  Caches all app assets for instant offline mobile use
 // ═══════════════════════════════════════════
 
-const CACHE_NAME  = 'todo-v1';
+const CACHE_NAME  = 'listdo-v3';
 const CACHE_FIRST = [
   './',
   './index.html',
   './style.css',
   './app.js',
   './manifest.json',
+  './icon.svg',
+  './icon-192.png',
+  './icon-512.png',
 ];
 
 // Install: cache all core assets

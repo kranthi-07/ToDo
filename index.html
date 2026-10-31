@@ -6,9 +6,12 @@
   <meta name="theme-color" content="#5B21B6"/>
   <meta name="description" content="Manage task lists and upcoming purchases in one place — works offline too."/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
-  <link rel="apple-touch-icon" href="icon.svg"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <title>ToDo</title>
+  <meta name="apple-mobile-web-app-title" content="List Do"/>
+  <link rel="icon" type="image/svg+xml" href="icon.svg"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"/>
+  <link rel="apple-touch-icon" href="icon-192.png"/>
+  <title>List Do</title>
   <link rel="manifest" href="manifest.json"/>
   <link rel="stylesheet" href="style.css"/>
 </head>
@@ -17,7 +20,9 @@
 
   <!-- ── SPLASH ── -->
   <div id="splash" class="splash">
-    <div class="splash-logo">✅</div>
+    <div class="splash-logo">
+      <img src="icon.svg" width="68" height="68" style="border-radius:18px;box-shadow:0 8px 24px rgba(79,70,229,0.35);" alt="List Do"/>
+    </div>
     <h1 class="splash-title">List Do</h1>
     <p class="splash-sub">Stay organized. Stay ahead.</p>
     <div class="splash-loader"><div class="splash-loader-fill"></div></div>
@@ -33,7 +38,7 @@
 
       <header class="app-bar">
         <div class="app-bar-brand">
-          <span class="brand-icon">✅</span>
+          <img src="icon.svg" width="28" height="28" style="border-radius:7px;margin-right:2px;vertical-align:middle;display:inline-block;" alt="List Do"/>
           <span class="brand-name">List Do</span>
         </div>
         <div class="app-bar-actions">
@@ -81,13 +86,13 @@
           <span class="sp-num" id="sp-tasks">0</span>
           <span class="sp-lbl">Tasks</span>
         </div>
-        <div class="stat-pill stat-green">
-          <span class="sp-num" id="sp-done">0</span>
-          <span class="sp-lbl">Done Today</span>
-        </div>
         <div class="stat-pill stat-orange">
           <span class="sp-num" id="sp-buys">0</span>
           <span class="sp-lbl">Buys</span>
+        </div>
+        <div class="stat-pill stat-pink">
+          <span class="sp-num" id="sp-clips">0</span>
+          <span class="sp-lbl">Clips</span>
         </div>
       </div>
 
@@ -106,6 +111,12 @@
           <span class="qt-meta" id="qc-buys-meta">₹0 planned</span>
           <svg class="qt-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
+        <button class="quick-tile qt-clips" id="qc-clips">
+          <span class="qt-icon">🎬</span>
+          <span class="qt-title">Saved Clips</span>
+          <span class="qt-meta" id="qc-clips-meta">0 saved videos</span>
+          <svg class="qt-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
       </div>
 
       <!-- High priority -->
@@ -119,6 +130,12 @@
         <p class="section-label">💸 Top Buys</p>
       </div>
       <div id="home-buys" class="preview-list"></div>
+
+      <!-- Recent clips -->
+      <div class="section-row">
+        <p class="section-label">🎬 Saved Clips & Tutorials</p>
+      </div>
+      <div id="home-clips" class="preview-list"></div>
 
       <div class="bottom-pad"></div>
     </div>
@@ -161,6 +178,9 @@
           <span class="ab-center-name" id="detail-title">List</span>
         </div>
         <div class="app-bar-actions">
+          <button class="ab-btn ab-btn-ghost" id="btn-share-list" aria-label="Share list" title="Share list via WhatsApp or text">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          </button>
           <button class="ab-btn ab-btn-ghost" id="btn-edit-list" aria-label="Edit list">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
           </button>
@@ -216,10 +236,15 @@
           <span class="brand-icon">🛍️</span>
           <span class="brand-name">Upcoming Buys</span>
         </div>
-        <button class="ab-btn ab-btn-primary" id="btn-new-buy" aria-label="Add item">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span>Add Item</span>
-        </button>
+        <div class="app-bar-actions">
+          <button class="ab-btn ab-btn-ghost" id="btn-share-buys" aria-label="Share wishlist" title="Share wishlist via WhatsApp or text">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          </button>
+          <button class="ab-btn ab-btn-primary" id="btn-new-buy" aria-label="Add item">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>Add Item</span>
+          </button>
+        </div>
       </header>
 
       <!-- Budget overview -->
@@ -240,6 +265,26 @@
         </div>
       </div>
       <div class="budget-track"><div class="budget-fill" id="budget-fill"></div></div>
+
+      <!-- Smart Budget Allocator ("I got money today!") -->
+      <div class="allocator-card" id="allocator-card">
+        <div class="ac-top">
+          <div class="ac-badge">⚡ SMART BUDGET PLANNER</div>
+          <div class="ac-title-wrap">
+            <span class="ac-title">💰 Got Money Today?</span>
+            <span class="ac-sub">See which items you can afford right now</span>
+          </div>
+        </div>
+        <div class="ac-form">
+          <div class="ac-inp-wrap">
+            <span class="ac-currency">₹</span>
+            <input type="number" id="inp-allocator" class="ac-inp" placeholder="Enter money received (e.g. 1500)" min="1" step="50"/>
+          </div>
+          <button class="ac-calc-btn" id="btn-calc-allocator">Plan Buys</button>
+          <button class="ac-clear-btn hidden" id="btn-clear-allocator" title="Clear allocation">✕</button>
+        </div>
+        <div id="allocator-results" class="ac-results hidden"></div>
+      </div>
 
       <!-- Category filter -->
       <div class="chip-scroll" id="cat-scroll">
@@ -283,6 +328,67 @@
       <div class="bottom-pad"></div>
     </div>
 
+    <!-- ════════════════════════
+         VIEW: CLIPS (Saved Media)
+    ════════════════════════ -->
+    <div id="view-clips" class="view">
+      <header class="app-bar">
+        <div class="app-bar-brand">
+          <span class="brand-icon">🎬</span>
+          <span class="brand-name">Saved Clips</span>
+        </div>
+        <button class="ab-btn ab-btn-primary" id="btn-new-clip" aria-label="Save clip">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>Save Clip</span>
+        </button>
+      </header>
+
+      <!-- Quick paste bar -->
+      <div class="clip-quick-bar">
+        <div class="cq-inp-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <input type="url" id="quick-clip-url" class="cq-inp" placeholder="Paste YouTube or Instagram link…" autocomplete="off"/>
+        </div>
+        <button class="cq-btn" id="btn-quick-add-clip">Save</button>
+      </div>
+
+      <!-- Category Filter Chips -->
+      <div class="chip-scroll" id="clip-cat-scroll">
+        <button class="chip active" data-ccat="all">All</button>
+        <button class="chip" data-ccat="study">📚 Study</button>
+        <button class="chip" data-ccat="tech">💻 Tech</button>
+        <button class="chip" data-ccat="college">🎓 College</button>
+        <button class="chip" data-ccat="motivation">🔥 Motivation</button>
+        <button class="chip" data-ccat="other">✨ Other</button>
+      </div>
+
+      <!-- Type filter toolbar -->
+      <div class="buys-toolbar">
+        <div class="tab-row tab-row-inline" id="clip-type-tabs">
+          <button class="tab active" data-ctype="all">All</button>
+          <button class="tab" data-ctype="youtube">▶ YouTube</button>
+          <button class="tab" data-ctype="instagram">📸 Instagram</button>
+        </div>
+        <span class="clip-count-badge" id="clips-counter">0 saved</span>
+      </div>
+
+      <!-- Search in clips -->
+      <div class="search-inline-wrap">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="search-clips" class="search-inline-inp" placeholder="Search captions & notes…" autocomplete="off"/>
+      </div>
+
+      <!-- Clips container -->
+      <div id="clips-container" class="cards-wrap">
+        <div class="empty-state" id="empty-clips">
+          <div class="es-icon">🎬</div>
+          <p class="es-title">No saved clips yet</p>
+          <p class="es-sub">Paste any YouTube video/Short or Instagram Reel link above to save with instant thumbnails & notes!</p>
+        </div>
+      </div>
+      <div class="bottom-pad"></div>
+    </div>
+
     <!-- ── BOTTOM NAV ── -->
     <nav class="bottom-nav" id="bottom-nav">
       <button class="nav-btn active" data-nav="home">
@@ -302,6 +408,12 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
         </div>
         <span>Buys</span>
+      </button>
+      <button class="nav-btn" data-nav="clips">
+        <div class="nav-icon-wrap">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>
+        </div>
+        <span>Clips</span>
       </button>
     </nav>
 
@@ -384,6 +496,37 @@
   </div>
 </dialog>
 
+<!-- ════ MODAL: CLIP ════ -->
+<dialog id="modal-clip" class="modal">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3 class="sheet-title" id="mc-title">Save Video or Reel</h3>
+    
+    <label class="f-label">Link / URL *</label>
+    <input id="inp-clip-url" class="f-input" type="url" placeholder="Paste YouTube, Shorts, or Instagram link…" autocomplete="off"/>
+
+    <!-- Live Media Preview Box -->
+    <div id="clip-modal-preview" class="clip-modal-preview hidden"></div>
+
+    <label class="f-label">Caption / Notes</label>
+    <input id="inp-clip-caption" class="f-input" type="text" placeholder="e.g. Helpful college tutorial or product review" maxlength="120" autocomplete="off"/>
+
+    <label class="f-label">Category</label>
+    <div class="cat-picker" id="clip-modal-cat-picker">
+      <button class="cat-opt active" data-ccat="study" type="button">📚 Study</button>
+      <button class="cat-opt" data-ccat="tech" type="button">💻 Tech</button>
+      <button class="cat-opt" data-ccat="college" type="button">🎓 College</button>
+      <button class="cat-opt" data-ccat="motivation" type="button">🔥 Motivation</button>
+      <button class="cat-opt" data-ccat="other" type="button">✨ Other</button>
+    </div>
+
+    <div class="sheet-footer">
+      <button class="btn btn-ghost" id="btn-cancel-clip">Cancel</button>
+      <button class="btn btn-primary" id="btn-save-clip">Save Clip</button>
+    </div>
+  </div>
+</dialog>
+
 <!-- ════ SEARCH OVERLAY ════ -->
 <dialog id="modal-search" class="modal">
   <div class="search-sheet">
@@ -406,10 +549,12 @@
 <!-- PWA INSTALL BANNER -->
 <div id="install-banner" class="install-banner hidden" role="complementary" aria-label="Install app">
   <div class="ib-left">
-    <div class="ib-icon">✅</div>
+    <div class="ib-icon">
+      <img src="icon-192.png" width="38" height="38" style="border-radius:9px;display:block;" alt="List Do"/>
+    </div>
     <div class="ib-text">
-      <span class="ib-title">Install ToDo</span>
-      <span class="ib-sub">Add to home screen · works offline</span>
+      <span class="ib-title">Install List Do</span>
+      <span class="ib-sub">Add to home screen · instant mobile app</span>
     </div>
   </div>
   <div class="ib-actions">
@@ -418,8 +563,61 @@
   </div>
 </div>
 
+<!-- INSTALL GUIDE MODAL (For iOS / Android) -->
+<dialog id="modal-install-guide" class="modal">
+  <div class="sheet install-guide-sheet">
+    <div class="sheet-handle"></div>
+    <div class="guide-header">
+      <img src="icon-192.png" width="56" height="56" style="border-radius:14px;box-shadow:0 6px 18px rgba(79,70,229,0.25);" alt="List Do"/>
+      <div>
+        <h3 class="guide-title">Install List Do</h3>
+        <p class="guide-sub">Install on your phone for full-screen offline use</p>
+      </div>
+    </div>
+    
+    <div id="guide-ios" class="guide-steps hidden">
+      <p class="guide-intro"><strong>On iPhone / iPad (Safari):</strong></p>
+      <div class="guide-step">
+        <span class="gs-num">1</span>
+        <span>Tap the <strong>Share</strong> button <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> at the bottom of Safari.</span>
+      </div>
+      <div class="guide-step">
+        <span class="gs-num">2</span>
+        <span>Scroll down and tap <strong>"Add to Home Screen"</strong> <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>.</span>
+      </div>
+      <div class="guide-step">
+        <span class="gs-num">3</span>
+        <span>Tap <strong>Add</strong> at top right. List Do is now installed on your home screen!</span>
+      </div>
+    </div>
+
+    <div id="guide-android" class="guide-steps">
+      <p class="guide-intro"><strong>On Android (Chrome / Edge / Samsung):</strong></p>
+      <div class="guide-step">
+        <span class="gs-num">1</span>
+        <span>Tap the <strong>three dots</strong> menu (⋮) at top right.</span>
+      </div>
+      <div class="guide-step">
+        <span class="gs-num">2</span>
+        <span>Select <strong>"Install app"</strong> or <strong>"Add to Home screen"</strong>.</span>
+      </div>
+      <div class="guide-step">
+        <span class="gs-num">3</span>
+        <span>Confirm <strong>"Install"</strong> when prompted.</span>
+      </div>
+    </div>
+
+    <div class="sheet-footer">
+      <button class="btn btn-primary" id="btn-close-guide" style="width:100%;">Got It</button>
+    </div>
+  </div>
+</dialog>
+
 <!-- Offline indicator -->
 <div id="offline-bar" class="offline-bar hidden">📡 You're offline — app still works!</div>
+
+<!-- Confetti Celebration Canvas -->
+<canvas id="confetti-canvas"></canvas>
 
 <script src="app.js"></script>
 </body>
