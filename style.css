@@ -672,13 +672,14 @@ svg { display: block; flex-shrink: 0; }
   width: 40px; height: 28px;
   display: flex; align-items: center; justify-content: center;
   border-radius: 99px;
-  transition: background .2s;
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), background .2s;
 }
 .nav-btn.active { color: var(--brand); }
 .nav-btn.active .nav-icon-wrap { background: var(--purple-l); }
 [data-theme="dark"] .nav-btn.active .nav-icon-wrap { background: rgba(91,33,182,.22); }
 .nav-btn.active svg { stroke: var(--brand); stroke-width: 2.5; }
-.nav-btn:active { opacity: .7; }
+.nav-btn:active .nav-icon-wrap { transform: scale(0.84); }
+.nav-btn:active { opacity: .85; }
 
 /* ── FAB ── */
 .fab {

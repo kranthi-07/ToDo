@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="List Do"/>
-  <link rel="icon" type="image/svg+xml" href="icon.svg"/>
-  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"/>
-  <link rel="apple-touch-icon" href="icon-192.png"/>
+  <link rel="icon" type="image/svg+xml" href="icon.svg?v=6"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=6"/>
+  <link rel="apple-touch-icon" href="icon-192.png?v=6"/>
   <title>List Do</title>
-  <link rel="manifest" href="manifest.json"/>
+  <link rel="manifest" href="manifest.json?v=6"/>
   <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
@@ -21,7 +21,26 @@
   <!-- ── SPLASH ── -->
   <div id="splash" class="splash">
     <div class="splash-logo">
-      <img src="icon.svg" width="68" height="68" style="border-radius:18px;box-shadow:0 8px 24px rgba(79,70,229,0.35);" alt="List Do"/>
+      <svg width="72" height="72" viewBox="0 0 512 512" style="border-radius:20px;box-shadow:0 12px 32px rgba(79,70,229,0.5);display:block;">
+        <defs>
+          <linearGradient id="spBg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#0F0A24"/><stop offset="100%" stop-color="#28154D"/>
+          </linearGradient>
+          <linearGradient id="spTile" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#6366F1"/><stop offset="50%" stop-color="#7C3AED"/><stop offset="100%" stop-color="#9333EA"/>
+          </linearGradient>
+          <linearGradient id="spCheck" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#6EE7B7"/>
+          </linearGradient>
+        </defs>
+        <rect width="512" height="512" rx="116" fill="url(#spBg)"/>
+        <rect x="8" y="8" width="496" height="496" rx="108" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="3"/>
+        <rect x="100" y="100" width="312" height="312" rx="72" fill="url(#spTile)"/>
+        <rect x="101" y="101" width="310" height="310" rx="71" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="2"/>
+        <circle cx="348" cy="158" r="8" fill="#34D399"/>
+        <circle cx="348" cy="158" r="16" fill="#34D399" opacity="0.3"/>
+        <path d="M 194 256 L 242 304 L 328 206" fill="none" stroke="url(#spCheck)" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
     </div>
     <h1 class="splash-title">List Do</h1>
     <p class="splash-sub">Stay organized. Stay ahead.</p>
@@ -38,7 +57,17 @@
 
       <header class="app-bar">
         <div class="app-bar-brand">
-          <img src="icon.svg" width="28" height="28" style="border-radius:7px;margin-right:2px;vertical-align:middle;display:inline-block;" alt="List Do"/>
+          <svg width="26" height="26" viewBox="0 0 512 512" style="border-radius:7px;margin-right:4px;vertical-align:middle;display:inline-block;">
+            <defs>
+              <linearGradient id="abTile" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#6366F1"/><stop offset="100%" stop-color="#9333EA"/>
+              </linearGradient>
+            </defs>
+            <rect width="512" height="512" rx="116" fill="#181135"/>
+            <rect x="80" y="80" width="352" height="352" rx="80" fill="url(#abTile)"/>
+            <circle cx="355" cy="155" r="12" fill="#34D399"/>
+            <path d="M 190 256 L 240 306 L 332 200" fill="none" stroke="#FFFFFF" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
           <span class="brand-name">List Do</span>
         </div>
         <div class="app-bar-actions">

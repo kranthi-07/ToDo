@@ -1,10 +1,9 @@
 // ═══════════════════════════════════════════
 //  List Do — Service Worker (sw.js)
-//  Caches all app assets for instant offline mobile use
 // ═══════════════════════════════════════════
 
-const CACHE_NAME  = 'listdo-v3';
-const CACHE_FIRST = [
+const CACHE_NAME = 'listdo-v105';
+const PRECACHE = [
   './',
   './index.html',
   './style.css',
@@ -12,40 +11,42 @@ const CACHE_FIRST = [
   './manifest.json',
   './icon.svg',
   './icon-192.png',
-  './icon-512.png',
+  './icon-512.png'
 ];
 
-// Install: cache all core assets
+// Install: precache and immediately activate
 self.addEventListener('install', e => {
+  self.skipWaiting();
   e.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(CACHE_FIRST))
-      .then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE))
   );
 });
 
-// Activate: clean up old caches
+// Activate: purge ALL old caches completely and claim clients
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+      Promise.all(keys.map(k => caches.delete(k)))
     ).then(() => self.clients.claim())
   );
 });
 
-// Fetch: cache-first for our assets, network-first for others
+// Fetch: Network-first for everything, offline cache fallback
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached;
-      return fetch(e.request).then(res => {
-        if (res && res.status === 200) {
+    fetch(e.request)
+      .then(res => {
+        if (res && res.status === 200 && res.type === 'basic') {
           const clone = res.clone();
           caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
         }
         return res;
-      }).catch(() => caches.match('./index.html'));
-    })
+      })
+      .catch(() => caches.match(e.request).then(cached => {
+        if (cached) return cached;
+        if (e.request.mode === 'navigate') return caches.match('./index.html');
+      }))
   );
 });

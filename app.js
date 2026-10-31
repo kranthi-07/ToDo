@@ -1363,13 +1363,17 @@ function doSearch(q){
 ══════════════════════════════════ */
 function bindAll() {
   // Nav
-  document.querySelectorAll('.nav-btn').forEach(b=>{
-    b.addEventListener('click',()=>{
-      const v=b.dataset.nav;
-      if(v==='home') goHome();
-      else if(v==='lists') goLists();
-      else if(v==='buys') goBuys();
-      else if(v==='clips') goClips();
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    b.addEventListener('pointerdown', () => {
+      vibe(22);
+    }, { passive: true });
+    b.addEventListener('click', () => {
+      vibe(25);
+      const v = b.dataset.nav;
+      if (v === 'home') goHome();
+      else if (v === 'lists') goLists();
+      else if (v === 'buys') goBuys();
+      else if (v === 'clips') goClips();
     });
   });
 
@@ -1547,6 +1551,15 @@ function bindAll() {
 let deferredInstallPrompt = null;
 
 function initPWA() {
+  // Purge legacy caches on startup so newest icons and UI appear immediately
+  if ('caches' in window) {
+    caches.keys().then(names => {
+      names.forEach(name => {
+        if (name !== 'listdo-v105') caches.delete(name);
+      });
+    });
+  }
+
   // Register service worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')
