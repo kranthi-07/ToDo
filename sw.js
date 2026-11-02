@@ -2,7 +2,7 @@
 //  List Do — Service Worker (sw.js)
 // ═══════════════════════════════════════════
 
-const CACHE_NAME = 'listdo-v105';
+const CACHE_NAME = 'listdo-v107';
 const PRECACHE = [
   './',
   './index.html',

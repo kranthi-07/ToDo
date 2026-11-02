@@ -42,7 +42,7 @@ let editClipId    = null;
 let taskFilter    = 'all';
 let buyCat        = 'all';
 let buyFilter     = 'all';
-let buySort       = 'date';
+let buySort       = 'custom';
 let clipCat       = 'all';
 let clipType      = 'all';
 let selColor      = LIST_COLORS[0].id;
@@ -98,15 +98,198 @@ function load() {
 function getList(id) { return state.lists.find(l=>l.id===id); }
 function colCfg(id)  { return LIST_COLORS.find(c=>c.id===id) || LIST_COLORS[0]; }
 
-function toast(msg) {
+function toast(msg, duration = 1200) {
   const el = $('toast');
+  if (!el) return;
   el.textContent = msg;
   el.classList.add('show');
   clearTimeout(toastTm);
-  toastTm = setTimeout(()=>el.classList.remove('show'), 2400);
+  toastTm = setTimeout(()=>el.classList.remove('show'), duration);
 }
-function vibe(pattern = 30) {
-  try { if (navigator.vibrate) navigator.vibrate(pattern); } catch(_) {}
+let audioCtx = null;
+function playHapticTick(type = 'medium') {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    if (!audioCtx) audioCtx = new AudioContext();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const now = audioCtx.currentTime;
+
+    const freq = type === 'light' ? 260 : type === 'heavy' ? 120 : 180;
+    const dur  = type === 'light' ? 0.018 : type === 'heavy' ? 0.045 : 0.026;
+    const vol  = type === 'light' ? 0.08 : type === 'heavy' ? 0.18 : 0.12;
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, now);
+    osc.frequency.exponentialRampToValueAtTime(35, now + dur);
+
+    gain.gain.setValueAtTime(vol, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + dur);
+  } catch(_) {}
+}
+
+function vibe(pattern = 45) {
+  // 1. Android Native Bridge (ListDo APK WebView)
+  try {
+    if (window.AndroidApp && typeof window.AndroidApp.vibrate === 'function') {
+      const ms = Array.isArray(pattern) ? (pattern[0] || 45) : pattern;
+      window.AndroidApp.vibrate(Math.max(35, Number(ms) || 45));
+    }
+  } catch(_) {}
+
+  // 2. Hardware Vibration API (Android Chrome & mobile browsers)
+  try {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      const p = Array.isArray(pattern)
+        ? pattern.map(x => Math.max(35, Number(x) || 35))
+        : Math.max(40, Number(pattern) || 45);
+      navigator.vibrate(p);
+    }
+  } catch(_) {}
+
+  // 3. Sensory Tactile Audio Tick (desktop Chrome, iOS, and audio-haptics)
+  try {
+    const intensity = Array.isArray(pattern)
+      ? 'heavy'
+      : (pattern >= 60 ? 'heavy' : pattern <= 30 ? 'light' : 'medium');
+    playHapticTick(intensity);
+  } catch(_) {}
+}
+
+/* ══════════════════════════════════
+   DRAG TO REARRANGE (Mobile & Desktop)
+══════════════════════════════════ */
+function makeDraggable({
+  container,
+  itemSelector,
+  handleSelector = '.drag-handle',
+  getId = el => el.dataset.id,
+  onReorder
+}) {
+  if (!container || container.dataset.dragInitialized === 'true') return;
+  container.dataset.dragInitialized = 'true';
+
+  container.addEventListener('pointerdown', e => {
+    const handle = e.target.closest(handleSelector);
+    if (!handle) return;
+
+    const card = handle.closest(itemSelector);
+    if (!card || !container.contains(card)) return;
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    vibe(45);
+
+    const fromId = getId(card);
+    const rect = card.getBoundingClientRect();
+    const offsetY = e.clientY - rect.top;
+    const cardWidth = rect.width;
+    const cardHeight = rect.height;
+
+    const placeholder = document.createElement('div');
+    placeholder.className = 'drag-placeholder';
+    placeholder.style.height = `${cardHeight}px`;
+
+    container.insertBefore(placeholder, card);
+
+    card.classList.add('is-dragging');
+    card.style.position = 'fixed';
+    card.style.top = `${e.clientY - offsetY}px`;
+    card.style.left = `${rect.left}px`;
+    card.style.width = `${cardWidth}px`;
+    card.style.height = `${cardHeight}px`;
+    card.style.zIndex = '99999';
+    card.style.pointerEvents = 'none';
+
+    let lastOverCard = null;
+
+    function onPointerMove(ev) {
+      ev.preventDefault();
+      card.style.top = `${ev.clientY - offsetY}px`;
+
+      const edge = 65;
+      if (ev.clientY < edge) {
+        window.scrollBy(0, -9);
+      } else if (window.innerHeight - ev.clientY < edge) {
+        window.scrollBy(0, 9);
+      }
+
+      const elBelow = document.elementFromPoint(ev.clientX, ev.clientY);
+      if (!elBelow) return;
+
+      const targetCard = elBelow.closest(itemSelector);
+      if (targetCard && targetCard !== card && container.contains(targetCard)) {
+        const targetRect = targetCard.getBoundingClientRect();
+        const midY = targetRect.top + targetRect.height / 2;
+
+        if (targetCard !== lastOverCard) {
+          lastOverCard = targetCard;
+          vibe(20);
+        }
+
+        if (ev.clientY < midY) {
+          container.insertBefore(placeholder, targetCard);
+        } else {
+          container.insertBefore(placeholder, targetCard.nextSibling);
+        }
+      }
+    }
+
+    function onPointerUp() {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+
+      vibe(50);
+
+      card.classList.remove('is-dragging');
+      card.style.position = '';
+      card.style.top = '';
+      card.style.left = '';
+      card.style.width = '';
+      card.style.height = '';
+      card.style.zIndex = '';
+      card.style.pointerEvents = '';
+
+      const nextCard = placeholder.nextElementSibling;
+      const prevCard = placeholder.previousElementSibling;
+
+      container.insertBefore(card, placeholder);
+      placeholder.remove();
+
+      let toId = null;
+      let insertBefore = true;
+
+      const nextItem = nextCard && nextCard !== card && nextCard.matches(itemSelector) ? nextCard : null;
+      const prevItem = prevCard && prevCard !== card && prevCard.matches(itemSelector) ? prevCard : null;
+
+      if (nextItem) {
+        toId = getId(nextItem);
+        insertBefore = true;
+      } else if (prevItem) {
+        toId = getId(prevItem);
+        insertBefore = false;
+      }
+
+      if (onReorder) {
+        onReorder(fromId, toId, insertBefore);
+      }
+    }
+
+    window.addEventListener('pointermove', onPointerMove, { passive: false });
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+  });
 }
 
 /* ══════════════════════════════════
@@ -352,6 +535,30 @@ function renderHome() {
 /* ══════════════════════════════════
    RENDER: LISTS
 ══════════════════════════════════ */
+function reorderLists(fromId, toId, insertBefore) {
+  if (!fromId || fromId === toId) return;
+  const fromIdx = state.lists.findIndex(l => l.id === fromId);
+  if (fromIdx === -1) return;
+  const [item] = state.lists.splice(fromIdx, 1);
+
+  if (!toId) {
+    state.lists.push(item);
+  } else {
+    let toIdx = state.lists.findIndex(l => l.id === toId);
+    if (toIdx !== -1) {
+      if (!insertBefore) toIdx++;
+      state.lists.splice(toIdx, 0, item);
+    } else {
+      state.lists.push(item);
+    }
+  }
+
+  save();
+  renderLists();
+  renderHome();
+  toast('List order updated 📋');
+}
+
 function renderLists() {
   const container = $('lists-container');
   const empty     = $('empty-lists');
@@ -373,8 +580,16 @@ function renderLists() {
 
     const card = document.createElement('div');
     card.className='list-card';
+    card.dataset.id = list.id;
     card.style.setProperty('--lc-color', c.hex);
     card.innerHTML=`
+      <div class="drag-handle lc-drag" title="Drag to rearrange" aria-label="Drag to rearrange">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="9" cy="5" r="1.8"/><circle cx="15" cy="5" r="1.8"/>
+          <circle cx="9" cy="12" r="1.8"/><circle cx="15" cy="12" r="1.8"/>
+          <circle cx="9" cy="19" r="1.8"/><circle cx="15" cy="19" r="1.8"/>
+        </svg>
+      </div>
       <div class="lc-emoji">${esc(list.emoji)}</div>
       <div class="lc-body">
         <div class="lc-name">${esc(list.name)}</div>
@@ -388,14 +603,50 @@ function renderLists() {
         <span class="lc-count">${done}</span>
         <span class="lc-count-lbl">done</span>
       </div>`;
-    card.addEventListener('click',()=>goDetail(list.id));
+    card.addEventListener('click', e => {
+      if (e.target.closest('.drag-handle')) return;
+      goDetail(list.id);
+    });
     container.appendChild(card);
+  });
+
+  makeDraggable({
+    container,
+    itemSelector: '.list-card',
+    handleSelector: '.drag-handle',
+    onReorder: reorderLists
   });
 }
 
 /* ══════════════════════════════════
    RENDER: DETAIL
 ══════════════════════════════════ */
+function reorderTasks(fromId, toId, insertBefore) {
+  if (!fromId || fromId === toId) return;
+  const list = getList(currentListId);
+  if (!list) return;
+
+  const fromIdx = list.tasks.findIndex(t => t.id === fromId);
+  if (fromIdx === -1) return;
+  const [item] = list.tasks.splice(fromIdx, 1);
+
+  if (!toId) {
+    list.tasks.push(item);
+  } else {
+    let toIdx = list.tasks.findIndex(t => t.id === toId);
+    if (toIdx !== -1) {
+      if (!insertBefore) toIdx++;
+      list.tasks.splice(toIdx, 0, item);
+    } else {
+      list.tasks.push(item);
+    }
+  }
+
+  save();
+  renderDetail();
+  toast('Task order updated ✅');
+}
+
 function renderDetail() {
   const list = getList(currentListId);
   if (!list) { goLists(); return; }
@@ -426,7 +677,7 @@ function renderDetail() {
   if (taskFilter==='high')   tasks=tasks.filter(t=>!t.done&&t.priority==='high');
   tasks.sort((a,b)=>{
     if(a.done!==b.done) return a.done?1:-1;
-    return PRI_ORDER[a.priority]-PRI_ORDER[b.priority];
+    return 0;
   });
 
   const container = $('tasks-container');
@@ -441,8 +692,16 @@ function renderDetail() {
     const dueInfo = fmtDue(task.dueDate);
     const card=document.createElement('div');
     card.className=`task-card${task.done?' done-card':''}`;
+    card.dataset.id = task.id;
     card.dataset.pri=task.priority;
     card.innerHTML=`
+      <div class="drag-handle" title="Drag to rearrange" aria-label="Drag to rearrange">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="9" cy="5" r="1.8"/><circle cx="15" cy="5" r="1.8"/>
+          <circle cx="9" cy="12" r="1.8"/><circle cx="15" cy="12" r="1.8"/>
+          <circle cx="9" cy="19" r="1.8"/><circle cx="15" cy="19" r="1.8"/>
+        </svg>
+      </div>
       <button class="check-btn${task.done?' chk-done':''}" data-id="${esc(task.id)}" aria-label="Toggle done"></button>
       <div class="task-body">
         <div class="task-text">${esc(task.text)}</div>
@@ -466,11 +725,80 @@ function renderDetail() {
   container.querySelectorAll('.check-btn').forEach(b=>b.addEventListener('click',()=>toggleTask(b.dataset.id)));
   container.querySelectorAll('.edit-task-btn').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openEditTask(b.dataset.id);}));
   container.querySelectorAll('.del-task-btn').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();deleteTask(b.dataset.id);}));
+
+  makeDraggable({
+    container,
+    itemSelector: '.task-card',
+    handleSelector: '.drag-handle',
+    onReorder: reorderTasks
+  });
 }
 
 /* ══════════════════════════════════
    RENDER: BUYS
 ══════════════════════════════════ */
+function reorderBuys(fromId, toId, insertBefore) {
+  if (!fromId || fromId === toId) return;
+  const fromIdx = state.buys.findIndex(b => b.id === fromId);
+  if (fromIdx === -1) return;
+  const [item] = state.buys.splice(fromIdx, 1);
+
+  if (!toId) {
+    state.buys.push(item);
+  } else {
+    let toIdx = state.buys.findIndex(b => b.id === toId);
+    if (toIdx !== -1) {
+      if (!insertBefore) toIdx++;
+      state.buys.splice(toIdx, 0, item);
+    } else {
+      state.buys.push(item);
+    }
+  }
+
+  buySort = 'custom';
+  const sel = $('buy-sort');
+  if (sel) sel.value = 'custom';
+
+  save();
+
+  if (lastAllocatedBudget > 0) {
+    autoRecalculateBudget();
+  }
+
+  renderBuys();
+  toast('Order updated! Top item will be bought first 🛍️');
+}
+
+function autoRecalculateBudget() {
+  if (!lastAllocatedBudget || lastAllocatedBudget <= 0) return;
+  const pending = state.buys.filter(b => !b.bought && b.price > 0);
+  if (pending.length === 0) return;
+
+  if (buySort === 'priority') {
+    pending.sort((a, b) => {
+      const pDiff = PRI_ORDER[a.priority] - PRI_ORDER[b.priority];
+      if (pDiff !== 0) return pDiff;
+      return a.price - b.price;
+    });
+  } else if (buySort === 'price-l') {
+    pending.sort((a, b) => a.price - b.price);
+  } else if (buySort === 'price-h') {
+    pending.sort((a, b) => b.price - a.price);
+  }
+
+  allocatedBuyIds.clear();
+  let remaining = lastAllocatedBudget;
+  let totalCost = 0;
+  for (const b of pending) {
+    if (b.price <= remaining) {
+      allocatedBuyIds.add(b.id);
+      remaining -= b.price;
+      totalCost += b.price;
+    }
+  }
+  renderAllocatorResults(lastAllocatedBudget, totalCost, remaining, allocatedBuyIds.size);
+}
+
 function renderBuys() {
   const total     = state.buys.reduce((s,b)=>s+(b.price||0),0);
   const boughtAmt = state.buys.filter(b=>b.bought).reduce((s,b)=>s+(b.price||0),0);
@@ -493,7 +821,8 @@ function renderBuys() {
   if (buySort==='price-h') buys.sort((a,b)=>(b.price||0)-(a.price||0));
   else if (buySort==='price-l') buys.sort((a,b)=>(a.price||0)-(b.price||0));
   else if (buySort==='priority') buys.sort((a,b)=>PRI_ORDER[a.priority]-PRI_ORDER[b.priority]);
-  else buys.sort((a,b)=>b.createdAt-a.createdAt);
+  else if (buySort==='date') buys.sort((a,b)=>b.createdAt-a.createdAt);
+  // custom preserves state.buys order!
   buys.sort((a,b)=>(a.bought?1:0)-(b.bought?1:0));
 
   const container=$('buys-container');
@@ -508,8 +837,16 @@ function renderBuys() {
     const isAfforded = allocatedBuyIds.has(buy.id);
     const card=document.createElement('div');
     card.className=`buy-card${buy.bought?' bought-card':''}${isAfforded?' afforded':''}`;
+    card.dataset.id=buy.id;
     card.dataset.pri=buy.priority;
     card.innerHTML=`
+      <div class="drag-handle" title="Drag to rearrange" aria-label="Drag to rearrange">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="9" cy="5" r="1.8"/><circle cx="15" cy="5" r="1.8"/>
+          <circle cx="9" cy="12" r="1.8"/><circle cx="15" cy="12" r="1.8"/>
+          <circle cx="9" cy="19" r="1.8"/><circle cx="15" cy="19" r="1.8"/>
+        </svg>
+      </div>
       <button class="check-btn${buy.bought?' chk-done':''}" data-id="${esc(buy.id)}" aria-label="Toggle bought"></button>
       <div class="buy-body">
         <div class="buy-name">${esc(buy.name)}</div>
@@ -537,6 +874,13 @@ function renderBuys() {
   container.querySelectorAll('.check-btn').forEach(b=>b.addEventListener('click',()=>toggleBuy(b.dataset.id)));
   container.querySelectorAll('.edit-buy-btn').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openEditBuy(b.dataset.id);}));
   container.querySelectorAll('.del-buy-btn').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();deleteBuy(b.dataset.id);}));
+
+  makeDraggable({
+    container,
+    itemSelector: '.buy-card',
+    handleSelector: '.drag-handle',
+    onReorder: reorderBuys
+  });
 }
 
 /* ══════════════════════════════════
@@ -697,7 +1041,7 @@ let allocatedBuyIds = new Set();
 let lastAllocatedBudget = 0;
 
 function calculateBudgetAllocation() {
-  vibe(30);
+  vibe(45);
   const inp = $('inp-allocator');
   const amount = parseFloat(inp?.value);
   if (!amount || amount <= 0) {
@@ -711,12 +1055,18 @@ function calculateBudgetAllocation() {
     return;
   }
 
-  // High priority first, then medium, then low. Within same priority, lower price first!
-  pending.sort((a, b) => {
-    const pDiff = PRI_ORDER[a.priority] - PRI_ORDER[b.priority];
-    if (pDiff !== 0) return pDiff;
-    return a.price - b.price;
-  });
+  // Priority / Price sorting if explicitly selected; otherwise respects user's exact manual order from top to bottom!
+  if (buySort === 'priority') {
+    pending.sort((a, b) => {
+      const pDiff = PRI_ORDER[a.priority] - PRI_ORDER[b.priority];
+      if (pDiff !== 0) return pDiff;
+      return a.price - b.price;
+    });
+  } else if (buySort === 'price-l') {
+    pending.sort((a, b) => a.price - b.price);
+  } else if (buySort === 'price-h') {
+    pending.sort((a, b) => b.price - a.price);
+  }
 
   allocatedBuyIds.clear();
   let remaining = amount;
@@ -944,6 +1294,29 @@ function deleteClip(id) {
   toast('Clip removed 🗑️');
 }
 
+function reorderClips(fromId, toId, insertBefore) {
+  if (!fromId || fromId === toId) return;
+  const fromIdx = state.clips.findIndex(c => c.id === fromId);
+  if (fromIdx === -1) return;
+  const [item] = state.clips.splice(fromIdx, 1);
+
+  if (!toId) {
+    state.clips.push(item);
+  } else {
+    let toIdx = state.clips.findIndex(c => c.id === toId);
+    if (toIdx !== -1) {
+      if (!insertBefore) toIdx++;
+      state.clips.splice(toIdx, 0, item);
+    } else {
+      state.clips.push(item);
+    }
+  }
+
+  save();
+  renderClips();
+  toast('Clips reordered 🎬');
+}
+
 function renderClips() {
   let clips = [...state.clips];
   if (clipCat !== 'all') clips = clips.filter(c => c.category === clipCat);
@@ -953,8 +1326,6 @@ function renderClips() {
   if (q) {
     clips = clips.filter(c => (c.caption || '').toLowerCase().includes(q) || (c.url || '').toLowerCase().includes(q));
   }
-
-  clips.sort((a, b) => b.createdAt - a.createdAt);
 
   const counter = $('clips-counter');
   if (counter) counter.textContent = `${clips.length} saved`;
@@ -974,6 +1345,7 @@ function renderClips() {
   clips.forEach(clip => {
     const card = document.createElement('div');
     card.className = `clip-card clip-${clip.type}`;
+    card.dataset.id = clip.id;
     
     let mediaHtml = '';
     if (clip.type === 'youtube' && clip.thumbnail) {
@@ -1023,6 +1395,13 @@ function renderClips() {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           </a>
           <div class="item-actions">
+            <div class="act-btn drag-handle" title="Drag to rearrange" aria-label="Drag to rearrange">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="9" cy="5" r="1.8"/><circle cx="15" cy="5" r="1.8"/>
+                <circle cx="9" cy="12" r="1.8"/><circle cx="15" cy="12" r="1.8"/>
+                <circle cx="9" cy="19" r="1.8"/><circle cx="15" cy="19" r="1.8"/>
+              </svg>
+            </div>
             <button class="act-btn share-clip-btn" data-id="${esc(clip.id)}" aria-label="Share">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
             </button>
@@ -1070,6 +1449,13 @@ function renderClips() {
       e.stopPropagation();
       deleteClip(b.dataset.id);
     });
+  });
+
+  makeDraggable({
+    container,
+    itemSelector: '.clip-card',
+    handleSelector: '.drag-handle',
+    onReorder: reorderClips
   });
 }
 
@@ -1362,19 +1748,73 @@ function doSearch(q){
    EVENT BINDINGS
 ══════════════════════════════════ */
 function bindAll() {
-  // Nav
+  // Nav buttons with immediate, reliable haptic feedback
   document.querySelectorAll('.nav-btn').forEach(b => {
-    b.addEventListener('pointerdown', () => {
-      vibe(22);
-    }, { passive: true });
     b.addEventListener('click', () => {
-      vibe(25);
+      vibe(45);
       const v = b.dataset.nav;
       if (v === 'home') goHome();
       else if (v === 'lists') goLists();
       else if (v === 'buys') goBuys();
       else if (v === 'clips') goClips();
     });
+  });
+
+  // Center Floating Add (+) Button (Thumb friendly)
+  $('nav-add-btn')?.addEventListener('click', () => {
+    vibe(50);
+    const activeView = document.querySelector('.view.active')?.id;
+    if (activeView === 'view-buys') {
+      openNewBuy();
+    } else if (activeView === 'view-lists') {
+      openNewList();
+    } else if (activeView === 'view-detail') {
+      openNewTask();
+    } else if (activeView === 'view-clips') {
+      openNewClip();
+    } else {
+      const qa = $('modal-quick-add');
+      if (qa && typeof qa.showModal === 'function') {
+        qa.showModal();
+      } else {
+        openNewBuy();
+      }
+    }
+  });
+
+  // Quick Add Bottom Sheet
+  $('btn-close-quick-add')?.addEventListener('click', () => {
+    vibe(30);
+    $('modal-quick-add')?.close();
+  });
+  $('modal-quick-add')?.addEventListener('click', e => {
+    if (e.target === $('modal-quick-add')) $('modal-quick-add')?.close();
+  });
+  $('qa-new-buy')?.addEventListener('click', () => {
+    vibe(40);
+    $('modal-quick-add')?.close();
+    openNewBuy();
+  });
+  $('qa-new-task')?.addEventListener('click', () => {
+    vibe(40);
+    $('modal-quick-add')?.close();
+    if (state.lists.length > 0) {
+      if (!currentListId) currentListId = state.lists[0].id;
+      openNewTask();
+    } else {
+      toast('Create a list first! 📋', 1200);
+      openNewList();
+    }
+  });
+  $('qa-new-list')?.addEventListener('click', () => {
+    vibe(40);
+    $('modal-quick-add')?.close();
+    openNewList();
+  });
+  $('qa-new-clip')?.addEventListener('click', () => {
+    vibe(40);
+    $('modal-quick-add')?.close();
+    openNewClip();
   });
 
   // Home
@@ -1416,6 +1856,7 @@ function bindAll() {
   // Category chips
   document.querySelectorAll('#cat-scroll .chip').forEach(b=>{
     b.addEventListener('click',()=>{
+      vibe(30);
       buyCat=b.dataset.cat;
       document.querySelectorAll('#cat-scroll .chip').forEach(c=>c.classList.remove('active'));
       b.classList.add('active');
@@ -1426,6 +1867,7 @@ function bindAll() {
   // Buy filter tabs
   document.querySelectorAll('[data-bfilter]').forEach(b=>{
     b.addEventListener('click',()=>{
+      vibe(30);
       buyFilter=b.dataset.bfilter;
       document.querySelectorAll('[data-bfilter]').forEach(c=>c.classList.remove('active'));
       b.classList.add('active');
@@ -1433,7 +1875,11 @@ function bindAll() {
     });
   });
 
-  $('buy-sort')?.addEventListener('change',e=>{ buySort=e.target.value; renderBuys(); });
+  $('buy-sort')?.addEventListener('change', e => {
+    buySort = e.target.value;
+    if (lastAllocatedBudget > 0) autoRecalculateBudget();
+    renderBuys();
+  });
   $('search-buys')?.addEventListener('input',()=>renderBuys());
 
   // List modal
@@ -1555,7 +2001,7 @@ function initPWA() {
   if ('caches' in window) {
     caches.keys().then(names => {
       names.forEach(name => {
-        if (name !== 'listdo-v105') caches.delete(name);
+        if (name !== 'listdo-v106') caches.delete(name);
       });
     });
   }
@@ -1595,19 +2041,22 @@ function initPWA() {
     toast('List Do installed on your device! 🎉');
   });
 
-  // Offline / online detection
-  function updateOnlineStatus() {
+  // Offline / online detection (transient toasts, never persistent)
+  let lastOnlineState = navigator.onLine;
+  function updateOnlineStatus(e) {
     const bar = $('offline-bar');
-    if (!bar) return;
-    if (navigator.onLine) {
-      bar.classList.add('hidden');
-    } else {
-      bar.classList.remove('hidden');
+    if (bar) bar.classList.add('hidden');
+    if (!e) return; // Don't annoy on initial load
+    if (!navigator.onLine && lastOnlineState !== false) {
+      lastOnlineState = false;
+      toast('⚡ Offline mode — works locally', 1400);
+    } else if (navigator.onLine && lastOnlineState !== true) {
+      lastOnlineState = true;
+      toast('🟢 Connected — back online', 1200);
     }
   }
   window.addEventListener('online',  updateOnlineStatus);
   window.addEventListener('offline', updateOnlineStatus);
-  updateOnlineStatus();
 
   // Banner button bindings
   $('ib-install')?.addEventListener('click', async () => {

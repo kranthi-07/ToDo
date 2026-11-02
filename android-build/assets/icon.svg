@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background Midnight Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F0A24"/>
+      <stop offset="50%" stop-color="#1A1138"/>
+      <stop offset="100%" stop-color="#28154D"/>
+    </linearGradient>
+
+    <!-- Glass Rim Highlight -->
+    <linearGradient id="rimGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.38"/>
+      <stop offset="40%" stop-color="#C4B5FD" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#5B21B6" stop-opacity="0.05"/>
+    </linearGradient>
+
+    <!-- Hero Floating Shield / Tile Gradient -->
+    <linearGradient id="tileGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366F1"/>
+      <stop offset="40%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#9333EA"/>
+    </linearGradient>
+
+    <!-- Specular Glass Sheen -->
+    <linearGradient id="sheenGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Hero Checkmark Glow Gradient -->
+    <linearGradient id="checkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="50%" stop-color="#F1F5F9"/>
+      <stop offset="100%" stop-color="#6EE7B7"/>
+    </linearGradient>
+
+    <!-- Standard SVG Gaussian Blur for Ambient Blooms -->
+    <filter id="bloomFilter" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="40"/>
+    </filter>
+
+    <!-- Ambient Shadow for Center Tile -->
+    <filter id="tileShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="20" stdDeviation="24" flood-color="#4F46E5" flood-opacity="0.45"/>
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+
+    <!-- Checkmark Glow -->
+    <filter id="checkGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#34D399" flood-opacity="0.5"/>
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#0F0A24" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- 1. Base Squircle -->
+  <rect width="512" height="512" rx="116" fill="url(#bgGrad)"/>
+
+  <!-- 2. Ambient Atmosphere Blooms with standard feGaussianBlur -->
+  <g filter="url(#bloomFilter)">
+    <circle cx="380" cy="130" r="140" fill="#7C3AED" opacity="0.45"/>
+    <circle cx="130" cy="380" r="120" fill="#4F46E5" opacity="0.35"/>
+  </g>
+
+  <!-- 3. Outer Glass Specular Rim -->
+  <rect x="8" y="8" width="496" height="496" rx="108" fill="none" stroke="url(#rimGrad)" stroke-width="3"/>
+
+  <!-- 4. Floating Luxury Center Tile -->
+  <g filter="url(#tileShadow)">
+    <rect x="100" y="100" width="312" height="312" rx="72" fill="url(#tileGrad)"/>
+    <rect x="101" y="101" width="310" height="155" rx="71" fill="url(#sheenGrad)"/>
+    <rect x="101" y="101" width="310" height="310" rx="71" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="2"/>
+  </g>
+
+  <!-- 5. Momentum Accent Dot -->
+  <circle cx="348" cy="158" r="16" fill="#34D399" opacity="0.3"/>
+  <circle cx="348" cy="158" r="8" fill="#34D399"/>
+
+  <!-- 6. Bold Luminescent Checkmark -->
+  <path d="M 194 256 L 242 304 L 328 206"
+        fill="none"
+        stroke="url(#checkGrad)"
+        stroke-width="38"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        filter="url(#checkGlow)"/>
+</svg>
