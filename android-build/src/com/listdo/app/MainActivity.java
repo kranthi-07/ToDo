@@ -6,6 +6,8 @@ import android.os.Build;
 import android.os.Vibrator;
 import android.os.VibrationEffect;
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -60,7 +62,19 @@ public class MainActivity extends Activity {
         s.setCacheMode(WebSettings.LOAD_DEFAULT);
 
         webView.addJavascriptInterface(new WebAppInterface(this), "AndroidApp");
-        webView.setWebViewClient(new WebViewClient());
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                if (url != null && (url.startsWith("http://") || url.startsWith("https://"))) {
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                        startActivity(intent);
+                        return true;
+                    } catch (Exception e) {}
+                }
+                return false;
+            }
+        });
         webView.setWebChromeClient(new WebChromeClient());
         webView.loadUrl("file:///android_asset/index.html");
         setContentView(webView);

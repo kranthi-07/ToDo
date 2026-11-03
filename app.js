@@ -85,7 +85,42 @@ function fmtDate(d) {
 function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(_){} }
 function load() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    let raw = localStorage.getItem(STORAGE_KEY);
+    // Auto-detect & migrate older or alternative storage keys if current is empty
+    if (!raw) {
+      const candidates = ['todo_v3', 'todo_v2', 'todo_v1', 'todo', 'todos', 'todo_data', 'listdo', 'listdo_v1', 'listdo_v2', 'listdo_v3', 'todo_state', 'app_state'];
+      for (const k of candidates) {
+        const item = localStorage.getItem(k);
+        if (item) {
+          try {
+            const parsed = JSON.parse(item);
+            if (parsed && (parsed.lists?.length || parsed.buys?.length || parsed.clips?.length)) {
+              raw = item;
+              localStorage.setItem(STORAGE_KEY, item);
+              break;
+            }
+          } catch (_) {}
+        }
+      }
+    }
+    // Scan all keys if still not found
+    if (!raw) {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k || k === 'pwa_dismissed') continue;
+        try {
+          const item = localStorage.getItem(k);
+          const parsed = JSON.parse(item);
+          if (parsed && typeof parsed === 'object') {
+            if (Array.isArray(parsed.lists) || Array.isArray(parsed.buys)) {
+              raw = item;
+              localStorage.setItem(STORAGE_KEY, item);
+              break;
+            }
+          }
+        } catch (_) {}
+      }
+    }
     if (raw) state = JSON.parse(raw);
   } catch(_) {}
   state.lists    = state.lists    || [];
@@ -816,7 +851,7 @@ function renderBuys() {
   if (buyFilter==='bought') buys=buys.filter(b=>b.bought);
 
   const q=$('search-buys')?.value.trim().toLowerCase()||'';
-  if (q) buys=buys.filter(b=>b.name.toLowerCase().includes(q)||(b.note||'').toLowerCase().includes(q));
+  if (q) buys=buys.filter(b=>b.name.toLowerCase().includes(q)||(b.note||'').toLowerCase().includes(q)||(b.url||'').toLowerCase().includes(q));
 
   if (buySort==='price-h') buys.sort((a,b)=>(b.price||0)-(a.price||0));
   else if (buySort==='price-l') buys.sort((a,b)=>(a.price||0)-(b.price||0));
@@ -835,6 +870,7 @@ function renderBuys() {
 
   buys.forEach(buy=>{
     const isAfforded = allocatedBuyIds.has(buy.id);
+    const store = parseStore(buy.url);
     const card=document.createElement('div');
     card.className=`buy-card${buy.bought?' bought-card':''}${isAfforded?' afforded':''}`;
     card.dataset.id=buy.id;
@@ -850,11 +886,18 @@ function renderBuys() {
       <button class="check-btn${buy.bought?' chk-done':''}" data-id="${esc(buy.id)}" aria-label="Toggle bought"></button>
       <div class="buy-body">
         <div class="buy-name">${esc(buy.name)}</div>
-        ${buy.note?`<div class="buy-note">${esc(buy.note)}</div>`:''}
+        ${buy.note?`<div class="buy-note"><span class="buy-note-ico">📝</span> ${esc(buy.note)}</div>`:''}
         <div class="buy-tags">
           <span class="cat-tag">${CAT_LABELS[buy.category]||'🎁 Other'}</span>
           <span class="ptag ptag-${buy.priority}">${buy.priority.charAt(0).toUpperCase()+buy.priority.slice(1)}</span>
           ${isAfforded?`<span class="afford-tag">✨ In Budget</span>`:''}
+          ${store ? `
+            <a href="${esc(store.url)}" target="_blank" rel="noopener noreferrer" class="store-pill ${store.brandCls}" title="Checkout on ${esc(store.label)}" onclick="event.stopPropagation();">
+              <span class="store-ico">${store.icon}</span>
+              <span class="store-name">${esc(store.label)}</span>
+              <svg class="store-arrow" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>
+          ` : ''}
         </div>
       </div>
       <div class="buy-right">
@@ -936,13 +979,29 @@ function deleteTask(tid){
 }
 
 /* ── CRUD: Buys ── */
-function addBuy(name,price,category,priority,note){
-  state.buys.unshift({id:uid(),name,price:parseFloat(price)||0,category,priority,note:note||'',bought:false,boughtAt:null,createdAt:Date.now()});
-  save(); renderBuys(); toast('Item added to Upcoming Buys ✅');
+function addBuy(name,price,category,priority,note,url){
+  state.buys.unshift({
+    id:uid(),
+    name,
+    price:parseFloat(price)||0,
+    category,
+    priority,
+    note:note||'',
+    url:(url||'').trim(),
+    bought:false,
+    boughtAt:null,
+    createdAt:Date.now()
+  });
+  save(); renderBuys(); toast('Item added to Upcoming Buys 🛍️');
 }
-function updateBuy(id,name,price,category,priority,note){
+function updateBuy(id,name,price,category,priority,note,url){
   const b=state.buys.find(x=>x.id===id); if(!b)return;
-  b.name=name; b.price=parseFloat(price)||0; b.category=category; b.priority=priority; b.note=note||'';
+  b.name=name;
+  b.price=parseFloat(price)||0;
+  b.category=category;
+  b.priority=priority;
+  b.note=note||'';
+  b.url=(url!==undefined)?(url||'').trim():(b.url||'');
   save(); renderBuys(); toast('Item updated ✏️');
 }
 function toggleBuy(id){
@@ -1025,6 +1084,8 @@ function shareBuysList() {
       const cat = CAT_LABELS[b.category] || '🎁 Other';
       const price = b.price > 0 ? fmtR(b.price) : 'Unpriced';
       msg += `• *${b.name}* — ${price} [${cat}]\n`;
+      if (b.note) msg += `   📝 Note: ${b.note}\n`;
+      if (b.url)  msg += `   🔗 Store: ${b.url}\n`;
     });
   }
   msg += `━━━━━━━━━━━━━━━━━━━━\n`;
@@ -1173,6 +1234,77 @@ function fmtTimeAgo(ts) {
   if (days === 1) return 'Yesterday';
   if (days < 30) return `${days}d ago`;
   return new Date(ts).toLocaleDateString('en-IN', { month:'short', day:'numeric' });
+}
+
+function parseStore(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== 'string') return null;
+  const s = rawUrl.trim();
+  if (!s) return null;
+  try {
+    let clean = s;
+    if (!clean.startsWith('http://') && !clean.startsWith('https://')) {
+      clean = 'https://' + clean;
+    }
+    const u = new URL(clean);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+
+    const host = u.hostname.toLowerCase().replace(/^www\./, '');
+    let label = 'Store';
+    let icon = '🛍️';
+    let brandCls = 'store-generic';
+
+    if (host.includes('amazon.')) {
+      label = 'Amazon';
+      icon = '🛒';
+      brandCls = 'store-amazon';
+    } else if (host.includes('flipkart.')) {
+      label = 'Flipkart';
+      icon = '⚡';
+      brandCls = 'store-flipkart';
+    } else if (host.includes('myntra.')) {
+      label = 'Myntra';
+      icon = '👗';
+      brandCls = 'store-myntra';
+    } else if (host.includes('ajio.')) {
+      label = 'Ajio';
+      icon = '🏷️';
+      brandCls = 'store-ajio';
+    } else if (host.includes('nykaa.')) {
+      label = 'Nykaa';
+      icon = '💄';
+      brandCls = 'store-nykaa';
+    } else if (host.includes('meesho.')) {
+      label = 'Meesho';
+      icon = '📦';
+      brandCls = 'store-meesho';
+    } else if (host.includes('apple.')) {
+      label = 'Apple';
+      icon = '🍎';
+      brandCls = 'store-apple';
+    } else if (host.includes('croma.')) {
+      label = 'Croma';
+      icon = '🔌';
+      brandCls = 'store-croma';
+    } else if (host.includes('tatacliq.')) {
+      label = 'Tata CLiQ';
+      icon = '🛍️';
+      brandCls = 'store-generic';
+    } else {
+      const parts = host.split('.');
+      const mainPart = parts.length > 1 ? parts[0] : host;
+      label = mainPart.charAt(0).toUpperCase() + mainPart.slice(1);
+    }
+
+    return {
+      url: u.href,
+      label,
+      icon,
+      brandCls,
+      domain: host
+    };
+  } catch (_) {
+    return null;
+  }
 }
 
 function parseClipUrl(rawUrl) {
@@ -1500,8 +1632,9 @@ function saveClip() {
     return;
   }
   const cap = $('inp-clip-caption').value.trim();
+  const idToUpdate = editClipId;
   closeClipModal();
-  if (editClipId) updateClip(editClipId, url, cap, selCatClip);
+  if (idToUpdate) updateClip(idToUpdate, url, cap, selCatClip);
   else addClip(url, cap, selCatClip);
 }
 
@@ -1613,8 +1746,9 @@ function closeListModal(){ $('modal-list').close(); editListId=null; }
 function saveList(){
   const name=$('inp-list-name').value.trim();
   if(!name){ $('inp-list-name').focus(); toast('Enter a list name'); return; }
+  const idToUpdate = editListId;
   closeListModal();
-  if(editListId) updateList(editListId,name,selEmoji,selColor);
+  if(idToUpdate) updateList(idToUpdate,name,selEmoji,selColor);
   else createList(name,selEmoji,selColor);
 }
 
@@ -1649,8 +1783,9 @@ function saveTask(){
   if(!text){ $('inp-task-text').focus(); toast('Enter a task name'); return; }
   const note=$('inp-task-note').value.trim();
   const due=$('inp-task-due').value;
+  const idToUpdate = editTaskId;
   closeTaskModal();
-  if(editTaskId) updateTask(editTaskId,text,note,selPriTask,due);
+  if(idToUpdate) updateTask(idToUpdate,text,note,selPriTask,due);
   else addTask(text,note,selPriTask,due);
 }
 
@@ -1660,6 +1795,7 @@ function openNewBuy(){
   $('mb-title').textContent='Add Item to Buy';
   $('inp-buy-name').value='';
   $('inp-buy-price').value='';
+  if ($('inp-buy-url')) $('inp-buy-url').value='';
   $('inp-buy-note').value='';
   $('btn-save-buy').textContent='Save Item';
   buildPri('pri-row-buy','medium');
@@ -1673,6 +1809,7 @@ function openEditBuy(id){
   $('mb-title').textContent='Edit Item';
   $('inp-buy-name').value=b.name;
   $('inp-buy-price').value=b.price||'';
+  if ($('inp-buy-url')) $('inp-buy-url').value=b.url||'';
   $('inp-buy-note').value=b.note||'';
   $('btn-save-buy').textContent='Save Changes';
   buildPri('pri-row-buy',b.priority);
@@ -1685,10 +1822,128 @@ function saveBuy(){
   const name=$('inp-buy-name').value.trim();
   if(!name){ $('inp-buy-name').focus(); toast('Enter an item name'); return; }
   const price=$('inp-buy-price').value;
+  const url=$('inp-buy-url')?.value.trim()||'';
   const note=$('inp-buy-note').value.trim();
+  const idToUpdate = editBuyId;
   closeBuyModal();
-  if(editBuyId) updateBuy(editBuyId,name,price,selCatBuy,selPriBuy,note);
-  else addBuy(name,price,selCatBuy,selPriBuy,note);
+  if(idToUpdate) updateBuy(idToUpdate,name,price,selCatBuy,selPriBuy,note,url);
+  else addBuy(name,price,selCatBuy,selPriBuy,note,url);
+}
+
+/* -- Data Backup & Recovery -- */
+function openBackupModal() {
+  $('modal-backup')?.showModal();
+}
+function closeBackupModal() {
+  $('modal-backup')?.close();
+}
+function exportBackupJson() {
+  const payload = JSON.stringify(state, null, 2);
+  const blob = new Blob([payload], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ListDo_Backup_${todayStr()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('Backup file downloaded! 💾', 1500);
+}
+function copyBackupText() {
+  const payload = JSON.stringify(state);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(payload).then(() => {
+      toast('Backup data copied to clipboard! 📋', 1500);
+    }).catch(() => {
+      promptBackupFallback(payload);
+    });
+  } else {
+    promptBackupFallback(payload);
+  }
+}
+function promptBackupFallback(text) {
+  const ta = $('inp-restore-json');
+  if (ta) {
+    ta.value = text;
+    ta.select();
+    toast('Data copied into text box below! 📋', 1500);
+  }
+}
+function scanAndRecoverData() {
+  let found = 0;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k || k === 'pwa_dismissed') continue;
+      try {
+        const item = localStorage.getItem(k);
+        const parsed = JSON.parse(item);
+        if (parsed && typeof parsed === 'object') {
+          if (Array.isArray(parsed.lists) && parsed.lists.length > 0) {
+            parsed.lists.forEach(l => {
+              if (!state.lists.some(existing => existing.id === l.id || existing.name === l.name)) {
+                state.lists.push(l);
+                found++;
+              }
+            });
+          }
+          if (Array.isArray(parsed.buys) && parsed.buys.length > 0) {
+            parsed.buys.forEach(b => {
+              if (!state.buys.some(existing => existing.id === b.id)) {
+                state.buys.push(b);
+                found++;
+              }
+            });
+          }
+          if (Array.isArray(parsed.clips) && parsed.clips.length > 0) {
+            parsed.clips.forEach(c => {
+              if (!state.clips.some(existing => existing.id === c.id)) {
+                state.clips.push(c);
+                found++;
+              }
+            });
+          }
+        }
+      } catch (_) {}
+    }
+  } catch (_) {}
+
+  if (found > 0) {
+    save();
+    renderHome();
+    toast(`Recovered ${found} items successfully! 🎉`, 1800);
+    closeBackupModal();
+  } else {
+    toast('No other previous data keys found on this origin.', 2000);
+  }
+}
+function applyRestore(rawJson) {
+  if (!rawJson || !rawJson.trim()) {
+    toast('Please paste your backup JSON code', 1500);
+    return;
+  }
+  try {
+    const data = JSON.parse(rawJson.trim());
+    if (!data || typeof data !== 'object') throw new Error('Invalid JSON');
+    if (!data.lists && !data.buys && !data.clips && !Array.isArray(data)) {
+      throw new Error('Unrecognized format');
+    }
+    if (Array.isArray(data)) {
+      state.lists = data;
+    } else {
+      if (Array.isArray(data.lists)) state.lists = data.lists;
+      if (Array.isArray(data.buys))  state.buys = data.buys;
+      if (Array.isArray(data.clips)) state.clips = data.clips;
+      if (data.settings) state.settings = { ...state.settings, ...data.settings };
+    }
+    save();
+    renderHome();
+    closeBackupModal();
+    toast('Data restored successfully! 🎉', 1800);
+  } catch (err) {
+    toast('Invalid backup format. Please check JSON text.', 2200);
+  }
 }
 
 /* -- Search -- */
@@ -1714,8 +1969,11 @@ function doSearch(q){
     });
   });
   state.buys.forEach(b=>{
-    if(b.name.toLowerCase().includes(ql)||(b.note||'').toLowerCase().includes(ql))
-      results.push({type:'buy',text:b.name,meta:`${CAT_LABELS[b.category]||'Other'} · ${fmtR(b.price)}`,sub:b.note});
+    if(b.name.toLowerCase().includes(ql)||(b.note||'').toLowerCase().includes(ql)||(b.url||'').toLowerCase().includes(ql)) {
+      const store = parseStore(b.url);
+      const storeLabel = store ? ` · 🔗 ${store.label}` : '';
+      results.push({type:'buy',text:b.name,meta:`${CAT_LABELS[b.category]||'Other'} · ${fmtR(b.price)}${storeLabel}`,sub:b.note});
+    }
   });
   state.clips.forEach(c=>{
     if((c.caption||'').toLowerCase().includes(ql)||(c.url||'').toLowerCase().includes(ql))
@@ -1817,12 +2075,37 @@ function bindAll() {
     openNewClip();
   });
 
-  // Home
+  // Home & Header
   $('qc-lists')?.addEventListener('click',goLists);
   $('qc-buys')?.addEventListener('click',goBuys);
   $('qc-clips')?.addEventListener('click',goClips);
   $('btn-search')?.addEventListener('click',openSearch);
   $('btn-darkmode')?.addEventListener('click',toggleTheme);
+  $('btn-backup')?.addEventListener('click',openBackupModal);
+
+  // Backup & Recovery Modal
+  $('btn-close-backup')?.addEventListener('click',closeBackupModal);
+  $('btn-scan-recover')?.addEventListener('click',()=>{ vibe(40); scanAndRecoverData(); });
+  $('btn-export-json')?.addEventListener('click',()=>{ vibe(40); exportBackupJson(); });
+  $('btn-copy-backup')?.addEventListener('click',()=>{ vibe(40); copyBackupText(); });
+  $('btn-apply-restore')?.addEventListener('click',()=>{ vibe(40); applyRestore($('inp-restore-json')?.value); });
+  $('btn-trigger-file-import')?.addEventListener('click',()=>{ $('file-import-json')?.click(); });
+  $('file-import-json')?.addEventListener('change',e=>{
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const content = ev.target?.result;
+      if (typeof content === 'string') {
+        const ta = $('inp-restore-json');
+        if (ta) ta.value = content;
+        applyRestore(content);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+  $('modal-backup')?.addEventListener('click',e=>{ if(e.target===$('modal-backup'))closeBackupModal(); });
 
   // Lists
   $('btn-new-list')?.addEventListener('click',openNewList);
@@ -1908,8 +2191,23 @@ function bindAll() {
   $('btn-cancel-buy')?.addEventListener('click',closeBuyModal);
   $('btn-save-buy')?.addEventListener('click',saveBuy);
   $('inp-buy-name')?.addEventListener('keydown',e=>{ if(e.key==='Enter')$('inp-buy-price')?.focus(); });
-  $('inp-buy-price')?.addEventListener('keydown',e=>{ if(e.key==='Enter')$('inp-buy-note')?.focus(); });
+  $('inp-buy-price')?.addEventListener('keydown',e=>{ if(e.key==='Enter')$('inp-buy-url')?.focus(); });
+  $('inp-buy-url')?.addEventListener('keydown',e=>{ if(e.key==='Enter')$('inp-buy-note')?.focus(); });
   $('inp-buy-note')?.addEventListener('keydown',e=>{ if(e.key==='Enter')saveBuy(); });
+  $('btn-paste-buy-url')?.addEventListener('click', async () => {
+    vibe(30);
+    try {
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text && text.trim()) {
+          $('inp-buy-url').value = text.trim();
+          toast('Link pasted! 📋', 1200);
+          return;
+        }
+      }
+    } catch (_) {}
+    $('inp-buy-url')?.focus();
+  });
   $('modal-buy')?.addEventListener('click',e=>{ if(e.target===$('modal-buy'))closeBuyModal(); });
 
   // Priority (buy)
@@ -1997,15 +2295,6 @@ function bindAll() {
 let deferredInstallPrompt = null;
 
 function initPWA() {
-  // Purge legacy caches on startup so newest icons and UI appear immediately
-  if ('caches' in window) {
-    caches.keys().then(names => {
-      names.forEach(name => {
-        if (name !== 'listdo-v106') caches.delete(name);
-      });
-    });
-  }
-
   // Register service worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')

@@ -74,6 +74,9 @@
           <button class="ab-btn" id="btn-search" aria-label="Search">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           </button>
+          <button class="ab-btn" id="btn-backup" title="Data Backup & Restore" aria-label="Data Backup and Restore">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </button>
           <button class="ab-btn" id="btn-darkmode" aria-label="Toggle theme">
             <svg id="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
             <svg id="icon-sun" class="hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
@@ -516,28 +519,38 @@
   <div class="sheet">
     <div class="sheet-handle"></div>
     <h3 class="sheet-title" id="mb-title">Add Item to Buy</h3>
-    <label class="f-label">Item Name</label>
-    <input id="inp-buy-name" class="f-input" type="text" placeholder="e.g. Scientific Calculator" maxlength="60" autocomplete="off"/>
-    <label class="f-label">Price (₹)</label>
+    <label class="f-label" for="inp-buy-name">Item Name</label>
+    <input id="inp-buy-name" class="f-input" type="text" placeholder="e.g. Sony WH-1000XM5 or Wildcraft Backpack" maxlength="60" autocomplete="off"/>
+    <label class="f-label" for="inp-buy-price">Price (₹)</label>
     <div class="price-field"><span class="price-prefix">₹</span><input id="inp-buy-price" class="f-input price-input" type="number" placeholder="0" min="0" step="1"/></div>
     <label class="f-label">Category</label>
     <div class="cat-grid" id="cat-picker">
-      <button class="cat-opt active" data-cat="education">📚 Study</button>
-      <button class="cat-opt" data-cat="electronics">💻 Tech</button>
-      <button class="cat-opt" data-cat="clothing">👕 Wear</button>
-      <button class="cat-opt" data-cat="food">🍔 Food</button>
-      <button class="cat-opt" data-cat="home">🏠 Home</button>
-      <button class="cat-opt" data-cat="sports">⚽ Sports</button>
-      <button class="cat-opt" data-cat="other">🎁 Other</button>
+      <button type="button" class="cat-opt active" data-cat="education">📚 Study</button>
+      <button type="button" class="cat-opt" data-cat="electronics">💻 Tech</button>
+      <button type="button" class="cat-opt" data-cat="clothing">👕 Wear</button>
+      <button type="button" class="cat-opt" data-cat="food">🍔 Food</button>
+      <button type="button" class="cat-opt" data-cat="home">🏠 Home</button>
+      <button type="button" class="cat-opt" data-cat="sports">⚽ Sports</button>
+      <button type="button" class="cat-opt" data-cat="other">🎁 Other</button>
     </div>
     <label class="f-label">Priority</label>
     <div class="pri-row" id="pri-row-buy">
-      <button class="pri-btn pri-high" data-p="high">🔴 High</button>
-      <button class="pri-btn pri-med active" data-p="medium">🟡 Medium</button>
-      <button class="pri-btn pri-low" data-p="low">🟢 Low</button>
+      <button type="button" class="pri-btn pri-high" data-p="high">🔴 High</button>
+      <button type="button" class="pri-btn pri-med active" data-p="medium">🟡 Medium</button>
+      <button type="button" class="pri-btn pri-low" data-p="low">🟢 Low</button>
     </div>
-    <label class="f-label">Note <span class="f-opt">(optional)</span></label>
-    <input id="inp-buy-note" class="f-input" type="text" placeholder="e.g. Buy when I get paid…" maxlength="100" autocomplete="off"/>
+    <label class="f-label" for="inp-buy-url">Store / Product Link <span class="f-opt">(optional)</span></label>
+    <div class="store-input-group">
+      <input id="inp-buy-url" class="f-input" type="url" placeholder="https://amazon.in/... or Flipkart, Myntra" autocomplete="off"/>
+      <button type="button" class="btn-paste-store" id="btn-paste-buy-url" title="Paste product link" aria-label="Paste product link">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+          <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+        </svg>
+      </button>
+    </div>
+    <label class="f-label" for="inp-buy-note">Spec Notes & Strategy <span class="f-opt">(optional)</span></label>
+    <input id="inp-buy-note" class="f-input" type="text" placeholder="e.g. Size: L, Color: Navy Blue · Wait for Diwali sale" maxlength="150" autocomplete="off"/>
     <div class="sheet-footer">
       <button class="btn btn-ghost" id="btn-cancel-buy">Cancel</button>
       <button class="btn btn-primary" id="btn-save-buy">Save Item</button>
@@ -699,6 +712,53 @@
     </div>
     <div class="sheet-footer" style="margin-top:16px;">
       <button class="btn btn-ghost" id="btn-close-quick-add" style="width:100%;">Cancel</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ── MODAL: BACKUP & DATA RECOVERY ── -->
+<dialog id="modal-backup" class="modal">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3 class="sheet-title">📦 Data & LocalStorage Backup</h3>
+    <p class="sheet-sub">Transfer data between mobile browsers, PWA, and APK seamlessly.</p>
+
+    <div class="backup-actions-grid">
+      <div class="backup-tile" id="btn-scan-recover">
+        <div class="bt-icon">🔍</div>
+        <div class="bt-info">
+          <h4>Scan & Recover Data</h4>
+          <p>Search device localStorage for older or missing lists</p>
+        </div>
+      </div>
+      <div class="backup-tile" id="btn-export-json">
+        <div class="bt-icon">💾</div>
+        <div class="bt-info">
+          <h4>Export Backup File</h4>
+          <p>Download a JSON backup of all lists, buys & clips</p>
+        </div>
+      </div>
+      <div class="backup-tile" id="btn-copy-backup">
+        <div class="bt-icon">📋</div>
+        <div class="bt-info">
+          <h4>Copy Backup Text</h4>
+          <p>Copy entire data payload to clipboard for instant pasting</p>
+        </div>
+      </div>
+    </div>
+
+    <label class="f-label" style="margin-top:16px;">Restore from Backup</label>
+    <div class="restore-field-wrap">
+      <textarea id="inp-restore-json" class="f-input restore-textarea" rows="3" placeholder="Paste your backup JSON or data code here..."></textarea>
+      <div class="restore-btns">
+        <input type="file" id="file-import-json" accept=".json,application/json" class="hidden"/>
+        <button type="button" class="btn btn-secondary" id="btn-trigger-file-import">📁 Upload File</button>
+        <button type="button" class="btn btn-primary" id="btn-apply-restore">⚡ Restore Now</button>
+      </div>
+    </div>
+
+    <div class="sheet-footer" style="margin-top:16px;">
+      <button class="btn btn-ghost" id="btn-close-backup" style="width:100%;">Close</button>
     </div>
   </div>
 </dialog>
