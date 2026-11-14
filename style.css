@@ -427,7 +427,74 @@ svg { display: block; flex-shrink: 0; }
 /* ══════════════════════════════════
    DETAIL VIEW
 ══════════════════════════════════ */
-/* Progress summary row */
+/* Luxury Detail Hero Progress Tile */
+.detail-hero-card {
+  margin: 12px 14px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px 18px;
+  box-shadow: var(--sh-xs);
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+[data-theme="dark"] .detail-hero-card {
+  background: linear-gradient(135deg, rgba(29, 24, 54, 0.75), rgba(15, 12, 30, 0.95));
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+.dh-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.dh-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.dh-emoji {
+  font-size: 28px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.dh-name {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-1);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dh-subtitle {
+  font-size: 12px;
+  color: var(--text-3);
+  margin-top: 2px;
+  font-weight: 600;
+}
+.dh-pct-badge {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--brand-2);
+  padding: 4px 10px;
+  border-radius: 99px;
+  background: rgba(124, 58, 237, 0.12);
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+[data-theme="dark"] .dh-pct-badge {
+  background: rgba(124, 58, 237, 0.2);
+  border-color: rgba(124, 58, 237, 0.4);
+  color: #C4B5FD;
+}
+
+/* Progress summary row (legacy fallback) */
 .progress-summary {
   display: flex; align-items: baseline; justify-content: space-between;
   padding: 14px 18px 0;
@@ -439,14 +506,61 @@ svg { display: block; flex-shrink: 0; }
 .ps-pct   { font-size: 22px; font-weight: 900; color: var(--brand); }
 
 .detail-prog-track {
-  margin: 10px 14px 0;
-  height: 8px; background: var(--surface-2);
-  border-radius: 99px; overflow: hidden;
+  height: 6px;
+  background: var(--surface-2);
+  border-radius: 99px;
+  overflow: hidden;
+  position: relative;
   border: 1px solid var(--border);
 }
 .detail-prog-fill {
-  height: 100%; width: 0; background: var(--brand);
-  border-radius: 99px; transition: width .5s ease;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #7C3AED, #6366F1);
+  border-radius: 99px;
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Floating Action Button (.fab) - High end mobile styling */
+.fab {
+  position: fixed;
+  right: 20px;
+  bottom: calc(var(--nav-h) + var(--safe-b) + 16px);
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7C3AED, #6366F1);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 10px 28px rgba(124, 58, 237, 0.45), 0 2px 8px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 95;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s;
+  outline: none;
+}
+.fab:active {
+  transform: scale(0.92);
+  box-shadow: 0 6px 18px rgba(124, 58, 237, 0.35);
+}
+.fab svg {
+  color: #ffffff;
+  stroke: #ffffff;
+}
+
+/* Empty state action button */
+.btn-empty-action {
+  margin-top: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  font-size: 14px;
+  border-radius: 99px;
+  font-weight: 700;
+  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.35);
 }
 
 /* Filter / Tab row */
@@ -862,6 +976,9 @@ svg { display: block; flex-shrink: 0; }
   transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s, opacity 0.25s;
   margin-bottom: 10px;
   position: relative;
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow: hidden;
 }
 [data-theme="dark"] .buy-card {
   background: var(--surface);
@@ -886,7 +1003,8 @@ svg { display: block; flex-shrink: 0; }
 .buy-body {
   flex: 1;
   min-width: 0;
-  cursor: pointer;
+  max-width: 100%;
+  overflow: hidden;
 }
 .buy-top-line {
   display: flex;
@@ -1015,6 +1133,116 @@ svg { display: block; flex-shrink: 0; }
   transform: translateY(-50%) scale(0.92);
   background: var(--surface-3);
   color: var(--brand-2);
+}
+
+/* Store Direct Launch Row */
+.buy-store-row {
+  margin-top: 8px;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.buy-store-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 7px 11px;
+  border-radius: var(--r-xs);
+  font-size: 11.5px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-1);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+  line-height: 1.2;
+}
+.buy-store-btn:active {
+  transform: scale(0.98);
+  filter: brightness(1.12);
+}
+.store-badge-left {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 700;
+  font-size: 11.5px;
+  flex-shrink: 0;
+}
+.store-dest-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  opacity: 0.75;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: var(--text-2);
+}
+.store-open-action {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  color: var(--brand-2);
+}
+[data-theme="dark"] .store-open-action {
+  color: #A78BFA;
+}
+
+/* Brand specific styling for direct store button */
+.buy-store-btn.store-amazon {
+  background: rgba(255, 153, 0, 0.08);
+  border-color: rgba(255, 153, 0, 0.35);
+}
+.buy-store-btn.store-amazon .store-open-action {
+  color: #D97706;
+}
+[data-theme="dark"] .buy-store-btn.store-amazon {
+  background: rgba(255, 153, 0, 0.12);
+  border-color: rgba(255, 153, 0, 0.4);
+}
+[data-theme="dark"] .buy-store-btn.store-amazon .store-open-action {
+  color: #FBBF24;
+}
+
+.buy-store-btn.store-flipkart {
+  background: rgba(40, 116, 240, 0.08);
+  border-color: rgba(40, 116, 240, 0.35);
+}
+.buy-store-btn.store-flipkart .store-open-action {
+  color: #2563EB;
+}
+[data-theme="dark"] .buy-store-btn.store-flipkart {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+[data-theme="dark"] .buy-store-btn.store-flipkart .store-open-action {
+  color: #60A5FA;
+}
+
+.buy-store-btn.store-myntra {
+  background: rgba(255, 63, 108, 0.08);
+  border-color: rgba(255, 63, 108, 0.35);
+}
+.buy-store-btn.store-myntra .store-open-action {
+  color: #E11D48;
+}
+[data-theme="dark"] .buy-store-btn.store-myntra {
+  background: rgba(244, 63, 94, 0.12);
+  border-color: rgba(244, 63, 94, 0.4);
+}
+[data-theme="dark"] .buy-store-btn.store-myntra .store-open-action {
+  color: #FB7185;
 }
 
 /* Store Link Pill & Brand Accents */

@@ -417,14 +417,10 @@ function showView(name) {
   });
   const nav = $('bottom-nav');
   if (!nav) return;
-  if (name==='detail') {
-    nav.classList.add('hidden');
-  } else {
-    nav.classList.remove('hidden');
-    document.querySelectorAll('.nav-btn').forEach(b =>
-      b.classList.toggle('active', b.dataset.nav===name)
-    );
-  }
+  nav.classList.remove('hidden');
+  document.querySelectorAll('.nav-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.nav === (name === 'detail' ? 'lists' : name))
+  );
 }
 function goHome()  { showView('home');  renderHome(); }
 function goLists() { showView('lists'); renderLists(); }
@@ -692,9 +688,11 @@ function renderDetail() {
   const bar = $('detail-accent-bar');
   if (bar) bar.style.background = c.hex;
 
-  // Title
+  // Title & Hero Progress Card
   const em=$('detail-emoji'); if(em) em.textContent=list.emoji;
   const dt=$('detail-title'); if(dt) dt.textContent=list.name;
+  const hem=$('detail-hero-emoji'); if(hem) hem.textContent=list.emoji;
+  const hdt=$('detail-hero-title'); if(hdt) hdt.textContent=list.name;
 
   // Progress
   const done  = list.tasks.filter(t=>t.done).length;
@@ -704,6 +702,8 @@ function renderDetail() {
   const pt=$('ps-total'); if(pt) pt.textContent=total;
   const pp=$('ps-pct');   if(pp){ pp.textContent=pct+'%'; pp.style.color=c.hex; }
   const pf=$('detail-prog-fill'); if(pf){ pf.style.width=pct+'%'; pf.style.background=c.hex; }
+  const sub=$('detail-subtitle'); if(sub) sub.textContent = `${done} of ${total} tasks completed`;
+  const badge=$('detail-pct-badge'); if(badge){ badge.textContent = pct+'%'; badge.style.color=c.hex; }
 
   // Filter
   let tasks=[...list.tasks];
@@ -870,7 +870,8 @@ function renderBuys() {
 
   buys.forEach(buy=>{
     const isAfforded = allocatedBuyIds.has(buy.id);
-    const store = parseStore(buy.url);
+    const store = getBuyStore(buy);
+    const noteText = formatBuyNote(buy, store);
     const card=document.createElement('div');
     card.className=`buy-card${buy.bought?' bought-card':''}${isAfforded?' afforded':''}`;
     card.dataset.id=buy.id;
@@ -886,19 +887,31 @@ function renderBuys() {
       <button class="check-btn${buy.bought?' chk-done':''}" data-id="${esc(buy.id)}" aria-label="Toggle bought"></button>
       <div class="buy-body">
         <div class="buy-name">${esc(buy.name)}</div>
-        ${buy.note?`<div class="buy-note"><span class="buy-note-ico">📝</span> ${esc(buy.note)}</div>`:''}
+        ${noteText?`<div class="buy-note"><span class="buy-note-ico">📝</span> ${esc(noteText)}</div>`:''}
         <div class="buy-tags">
           <span class="cat-tag">${CAT_LABELS[buy.category]||'🎁 Other'}</span>
           <span class="ptag ptag-${buy.priority}">${buy.priority.charAt(0).toUpperCase()+buy.priority.slice(1)}</span>
           ${isAfforded?`<span class="afford-tag">✨ In Budget</span>`:''}
-          ${store ? `
-            <a href="${esc(store.url)}" target="_blank" rel="noopener noreferrer" class="store-pill ${store.brandCls}" title="Checkout on ${esc(store.label)}" onclick="event.stopPropagation();">
-              <span class="store-ico">${store.icon}</span>
-              <span class="store-name">${esc(store.label)}</span>
-              <svg class="store-arrow" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            </a>
-          ` : ''}
         </div>
+        ${store ? `
+          <div class="buy-store-row">
+            <button type="button" class="buy-store-btn ${store.brandCls}" data-url="${esc(store.url)}" title="Open product in ${esc(store.label)}">
+              <span class="store-badge-left">
+                <span class="store-ico">${store.icon}</span>
+                <span class="store-brand-text">${esc(store.label)}</span>
+              </span>
+              <span class="store-dest-text">${esc(store.domain)}</span>
+              <span class="store-open-action">
+                <span>Visit</span>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                  <polyline points="15 3 21 3 21 9"/>
+                  <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+              </span>
+            </button>
+          </div>
+        ` : ''}
       </div>
       <div class="buy-right">
         <span class="buy-price${!buy.price?' zero':''}">${buy.price>0?fmtR(buy.price):'—'}</span>
@@ -917,6 +930,11 @@ function renderBuys() {
   container.querySelectorAll('.check-btn').forEach(b=>b.addEventListener('click',()=>toggleBuy(b.dataset.id)));
   container.querySelectorAll('.edit-buy-btn').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openEditBuy(b.dataset.id);}));
   container.querySelectorAll('.del-buy-btn').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();deleteBuy(b.dataset.id);}));
+  container.querySelectorAll('.buy-store-btn').forEach(b=>b.addEventListener('click',e=>{
+    e.preventDefault();
+    e.stopPropagation();
+    openStoreUrl(b.dataset.url);
+  }));
 
   makeDraggable({
     container,
@@ -1236,6 +1254,29 @@ function fmtTimeAgo(ts) {
   return new Date(ts).toLocaleDateString('en-IN', { month:'short', day:'numeric' });
 }
 
+function openStoreUrl(rawUrl) {
+  if (!rawUrl) return;
+  let url = String(rawUrl).trim();
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = 'https://' + url;
+  }
+  vibe(45);
+
+  try {
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      try { document.body.removeChild(a); } catch (_) {}
+    }, 300);
+  } catch (_) {
+    window.location.assign(url);
+  }
+}
+
 function parseStore(rawUrl) {
   if (!rawUrl || typeof rawUrl !== 'string') return null;
   const s = rawUrl.trim();
@@ -1253,11 +1294,11 @@ function parseStore(rawUrl) {
     let icon = '🛍️';
     let brandCls = 'store-generic';
 
-    if (host.includes('amazon.')) {
+    if (host.includes('amazon.') || host === 'amzn.in' || host === 'amzn.to' || host === 'a.co') {
       label = 'Amazon';
       icon = '🛒';
       brandCls = 'store-amazon';
-    } else if (host.includes('flipkart.')) {
+    } else if (host.includes('flipkart.') || host.includes('fkrt.it')) {
       label = 'Flipkart';
       icon = '⚡';
       brandCls = 'store-flipkart';
@@ -1289,6 +1330,14 @@ function parseStore(rawUrl) {
       label = 'Tata CLiQ';
       icon = '🛍️';
       brandCls = 'store-generic';
+    } else if (host.includes('reliancedigital.')) {
+      label = 'Reliance';
+      icon = '⚡';
+      brandCls = 'store-generic';
+    } else if (host.includes('boat-lifestyle.')) {
+      label = 'boAt';
+      icon = '🎧';
+      brandCls = 'store-generic';
     } else {
       const parts = host.split('.');
       const mainPart = parts.length > 1 ? parts[0] : host;
@@ -1305,6 +1354,34 @@ function parseStore(rawUrl) {
   } catch (_) {
     return null;
   }
+}
+
+function getBuyStore(buy) {
+  if (buy.url) {
+    const s = parseStore(buy.url);
+    if (s) return s;
+  }
+  if (buy.note) {
+    const match = buy.note.match(/https?:\/\/[^\s]+/i);
+    if (match) {
+      const s = parseStore(match[0]);
+      if (s) return s;
+    }
+  }
+  return null;
+}
+
+function formatBuyNote(buy, store) {
+  if (!buy.note) return '';
+  let text = buy.note.trim();
+  if (store && store.url) {
+    if (text === store.url || text === store.url.replace(/^https?:\/\//, '')) {
+      return '';
+    }
+    text = text.replace(store.url, '').trim();
+  }
+  text = text.replace(/https?:\/\/[^\s]+/ig, '').trim();
+  return text;
 }
 
 function parseClipUrl(rawUrl) {
@@ -2116,10 +2193,12 @@ function bindAll() {
   $('btn-edit-list')?.addEventListener('click',()=>openEditList(currentListId));
   $('btn-del-list')?.addEventListener('click',()=>deleteList(currentListId));
   $('btn-new-task')?.addEventListener('click',openNewTask);
+  $('btn-empty-add-task')?.addEventListener('click',openNewTask);
 
   // Task filter tabs
   document.querySelectorAll('#view-detail [data-filter]').forEach(btn=>{
     btn.addEventListener('click',()=>{
+      vibe(30);
       taskFilter=btn.dataset.filter;
       document.querySelectorAll('#view-detail [data-filter]').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');

@@ -225,35 +225,44 @@
       <!-- Colored accent bar -->
       <div class="detail-accent-bar" id="detail-accent-bar"></div>
 
-      <!-- Progress summary -->
-      <div class="progress-summary">
-        <div class="ps-left">
-          <span class="ps-done" id="ps-done">0</span>
-          <span class="ps-sep"> / </span>
-          <span class="ps-total" id="ps-total">0</span>
-          <span class="ps-lbl"> tasks completed</span>
+      <!-- Luxury Detail Hero Progress Tile -->
+      <div class="detail-hero-card" id="detail-hero-card">
+        <div class="dh-top">
+          <div class="dh-title-wrap">
+            <span class="dh-emoji" id="detail-hero-emoji">📋</span>
+            <div style="min-width:0;">
+              <h2 class="dh-name" id="detail-hero-title">List</h2>
+              <p class="dh-subtitle" id="detail-subtitle">0 of 0 tasks completed</p>
+            </div>
+          </div>
+          <div class="dh-pct-badge" id="detail-pct-badge">0%</div>
         </div>
-        <span class="ps-pct" id="ps-pct">0%</span>
+        <div class="detail-prog-track">
+          <div class="detail-prog-fill" id="detail-prog-fill"></div>
+        </div>
       </div>
-      <div class="detail-prog-track"><div class="detail-prog-fill" id="detail-prog-fill"></div></div>
 
-      <!-- Filter tabs -->
-      <div class="tab-row">
-        <button class="tab active" data-filter="all">All</button>
-        <button class="tab" data-filter="active">Active</button>
-        <button class="tab" data-filter="done">Done</button>
-        <button class="tab" data-filter="high">🔴 Urgent</button>
+      <!-- Segmented Filter Control -->
+      <div class="segmented-control" style="margin: 6px 14px 10px;">
+        <button class="seg-btn active" data-filter="all">All</button>
+        <button class="seg-btn" data-filter="active">Active</button>
+        <button class="seg-btn" data-filter="done">Done</button>
+        <button class="seg-btn" data-filter="high">🔴 Urgent</button>
       </div>
 
       <div id="tasks-container" class="cards-wrap">
         <div class="empty-state" id="empty-tasks">
           <div class="es-icon">✅</div>
           <p class="es-title">No tasks yet</p>
-          <p class="es-sub">Tap <strong>+</strong> to add your first task</p>
+          <p class="es-sub">Stay organized by adding your first task to this list</p>
+          <button type="button" class="btn btn-primary btn-empty-action" id="btn-empty-add-task">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>Add First Task</span>
+          </button>
         </div>
       </div>
 
-      <button class="fab" id="btn-new-task">
+      <button class="fab" id="btn-new-task" title="Add Task" aria-label="Add Task">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       </button>
       <div class="bottom-pad"></div>

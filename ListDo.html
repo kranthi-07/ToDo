@@ -443,7 +443,74 @@ svg { display: block; flex-shrink: 0; }
 /* ══════════════════════════════════
    DETAIL VIEW
 ══════════════════════════════════ */
-/* Progress summary row */
+/* Luxury Detail Hero Progress Tile */
+.detail-hero-card {
+  margin: 12px 14px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px 18px;
+  box-shadow: var(--sh-xs);
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+[data-theme="dark"] .detail-hero-card {
+  background: linear-gradient(135deg, rgba(29, 24, 54, 0.75), rgba(15, 12, 30, 0.95));
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+.dh-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.dh-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.dh-emoji {
+  font-size: 28px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.dh-name {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-1);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dh-subtitle {
+  font-size: 12px;
+  color: var(--text-3);
+  margin-top: 2px;
+  font-weight: 600;
+}
+.dh-pct-badge {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--brand-2);
+  padding: 4px 10px;
+  border-radius: 99px;
+  background: rgba(124, 58, 237, 0.12);
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+[data-theme="dark"] .dh-pct-badge {
+  background: rgba(124, 58, 237, 0.2);
+  border-color: rgba(124, 58, 237, 0.4);
+  color: #C4B5FD;
+}
+
+/* Progress summary row (legacy fallback) */
 .progress-summary {
   display: flex; align-items: baseline; justify-content: space-between;
   padding: 14px 18px 0;
@@ -455,14 +522,61 @@ svg { display: block; flex-shrink: 0; }
 .ps-pct   { font-size: 22px; font-weight: 900; color: var(--brand); }
 
 .detail-prog-track {
-  margin: 10px 14px 0;
-  height: 8px; background: var(--surface-2);
-  border-radius: 99px; overflow: hidden;
+  height: 6px;
+  background: var(--surface-2);
+  border-radius: 99px;
+  overflow: hidden;
+  position: relative;
   border: 1px solid var(--border);
 }
 .detail-prog-fill {
-  height: 100%; width: 0; background: var(--brand);
-  border-radius: 99px; transition: width .5s ease;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #7C3AED, #6366F1);
+  border-radius: 99px;
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Floating Action Button (.fab) - High end mobile styling */
+.fab {
+  position: fixed;
+  right: 20px;
+  bottom: calc(var(--nav-h) + var(--safe-b) + 16px);
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7C3AED, #6366F1);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 10px 28px rgba(124, 58, 237, 0.45), 0 2px 8px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 95;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s;
+  outline: none;
+}
+.fab:active {
+  transform: scale(0.92);
+  box-shadow: 0 6px 18px rgba(124, 58, 237, 0.35);
+}
+.fab svg {
+  color: #ffffff;
+  stroke: #ffffff;
+}
+
+/* Empty state action button */
+.btn-empty-action {
+  margin-top: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  font-size: 14px;
+  border-radius: 99px;
+  font-weight: 700;
+  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.35);
 }
 
 /* Filter / Tab row */
@@ -878,6 +992,9 @@ svg { display: block; flex-shrink: 0; }
   transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s, opacity 0.25s;
   margin-bottom: 10px;
   position: relative;
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow: hidden;
 }
 [data-theme="dark"] .buy-card {
   background: var(--surface);
@@ -902,7 +1019,8 @@ svg { display: block; flex-shrink: 0; }
 .buy-body {
   flex: 1;
   min-width: 0;
-  cursor: pointer;
+  max-width: 100%;
+  overflow: hidden;
 }
 .buy-top-line {
   display: flex;
@@ -1031,6 +1149,116 @@ svg { display: block; flex-shrink: 0; }
   transform: translateY(-50%) scale(0.92);
   background: var(--surface-3);
   color: var(--brand-2);
+}
+
+/* Store Direct Launch Row */
+.buy-store-row {
+  margin-top: 8px;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.buy-store-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 7px 11px;
+  border-radius: var(--r-xs);
+  font-size: 11.5px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-1);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+  line-height: 1.2;
+}
+.buy-store-btn:active {
+  transform: scale(0.98);
+  filter: brightness(1.12);
+}
+.store-badge-left {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 700;
+  font-size: 11.5px;
+  flex-shrink: 0;
+}
+.store-dest-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  opacity: 0.75;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: var(--text-2);
+}
+.store-open-action {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  color: var(--brand-2);
+}
+[data-theme="dark"] .store-open-action {
+  color: #A78BFA;
+}
+
+/* Brand specific styling for direct store button */
+.buy-store-btn.store-amazon {
+  background: rgba(255, 153, 0, 0.08);
+  border-color: rgba(255, 153, 0, 0.35);
+}
+.buy-store-btn.store-amazon .store-open-action {
+  color: #D97706;
+}
+[data-theme="dark"] .buy-store-btn.store-amazon {
+  background: rgba(255, 153, 0, 0.12);
+  border-color: rgba(255, 153, 0, 0.4);
+}
+[data-theme="dark"] .buy-store-btn.store-amazon .store-open-action {
+  color: #FBBF24;
+}
+
+.buy-store-btn.store-flipkart {
+  background: rgba(40, 116, 240, 0.08);
+  border-color: rgba(40, 116, 240, 0.35);
+}
+.buy-store-btn.store-flipkart .store-open-action {
+  color: #2563EB;
+}
+[data-theme="dark"] .buy-store-btn.store-flipkart {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+[data-theme="dark"] .buy-store-btn.store-flipkart .store-open-action {
+  color: #60A5FA;
+}
+
+.buy-store-btn.store-myntra {
+  background: rgba(255, 63, 108, 0.08);
+  border-color: rgba(255, 63, 108, 0.35);
+}
+.buy-store-btn.store-myntra .store-open-action {
+  color: #E11D48;
+}
+[data-theme="dark"] .buy-store-btn.store-myntra {
+  background: rgba(244, 63, 94, 0.12);
+  border-color: rgba(244, 63, 94, 0.4);
+}
+[data-theme="dark"] .buy-store-btn.store-myntra .store-open-action {
+  color: #FB7185;
 }
 
 /* Store Link Pill & Brand Accents */
@@ -2369,35 +2597,44 @@ dialog::backdrop { background: rgba(15,10,30,.55); backdrop-filter: blur(4px); }
       <!-- Colored accent bar -->
       <div class="detail-accent-bar" id="detail-accent-bar"></div>
 
-      <!-- Progress summary -->
-      <div class="progress-summary">
-        <div class="ps-left">
-          <span class="ps-done" id="ps-done">0</span>
-          <span class="ps-sep"> / </span>
-          <span class="ps-total" id="ps-total">0</span>
-          <span class="ps-lbl"> tasks completed</span>
+      <!-- Luxury Detail Hero Progress Tile -->
+      <div class="detail-hero-card" id="detail-hero-card">
+        <div class="dh-top">
+          <div class="dh-title-wrap">
+            <span class="dh-emoji" id="detail-hero-emoji">📋</span>
+            <div style="min-width:0;">
+              <h2 class="dh-name" id="detail-hero-title">List</h2>
+              <p class="dh-subtitle" id="detail-subtitle">0 of 0 tasks completed</p>
+            </div>
+          </div>
+          <div class="dh-pct-badge" id="detail-pct-badge">0%</div>
         </div>
-        <span class="ps-pct" id="ps-pct">0%</span>
+        <div class="detail-prog-track">
+          <div class="detail-prog-fill" id="detail-prog-fill"></div>
+        </div>
       </div>
-      <div class="detail-prog-track"><div class="detail-prog-fill" id="detail-prog-fill"></div></div>
 
-      <!-- Filter tabs -->
-      <div class="tab-row">
-        <button class="tab active" data-filter="all">All</button>
-        <button class="tab" data-filter="active">Active</button>
-        <button class="tab" data-filter="done">Done</button>
-        <button class="tab" data-filter="high">🔴 Urgent</button>
+      <!-- Segmented Filter Control -->
+      <div class="segmented-control" style="margin: 6px 14px 10px;">
+        <button class="seg-btn active" data-filter="all">All</button>
+        <button class="seg-btn" data-filter="active">Active</button>
+        <button class="seg-btn" data-filter="done">Done</button>
+        <button class="seg-btn" data-filter="high">🔴 Urgent</button>
       </div>
 
       <div id="tasks-container" class="cards-wrap">
         <div class="empty-state" id="empty-tasks">
           <div class="es-icon">✅</div>
           <p class="es-title">No tasks yet</p>
-          <p class="es-sub">Tap <strong>+</strong> to add your first task</p>
+          <p class="es-sub">Stay organized by adding your first task to this list</p>
+          <button type="button" class="btn btn-primary btn-empty-action" id="btn-empty-add-task">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>Add First Task</span>
+          </button>
         </div>
       </div>
 
-      <button class="fab" id="btn-new-task">
+      <button class="fab" id="btn-new-task" title="Add Task" aria-label="Add Task">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       </button>
       <div class="bottom-pad"></div>
@@ -3330,14 +3567,10 @@ function showView(name) {
   });
   const nav = $('bottom-nav');
   if (!nav) return;
-  if (name==='detail') {
-    nav.classList.add('hidden');
-  } else {
-    nav.classList.remove('hidden');
-    document.querySelectorAll('.nav-btn').forEach(b =>
-      b.classList.toggle('active', b.dataset.nav===name)
-    );
-  }
+  nav.classList.remove('hidden');
+  document.querySelectorAll('.nav-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.nav === (name === 'detail' ? 'lists' : name))
+  );
 }
 function goHome()  { showView('home');  renderHome(); }
 function goLists() { showView('lists'); renderLists(); }
@@ -3605,9 +3838,11 @@ function renderDetail() {
   const bar = $('detail-accent-bar');
   if (bar) bar.style.background = c.hex;
 
-  // Title
+  // Title & Hero Progress Card
   const em=$('detail-emoji'); if(em) em.textContent=list.emoji;
   const dt=$('detail-title'); if(dt) dt.textContent=list.name;
+  const hem=$('detail-hero-emoji'); if(hem) hem.textContent=list.emoji;
+  const hdt=$('detail-hero-title'); if(hdt) hdt.textContent=list.name;
 
   // Progress
   const done  = list.tasks.filter(t=>t.done).length;
@@ -3617,6 +3852,8 @@ function renderDetail() {
   const pt=$('ps-total'); if(pt) pt.textContent=total;
   const pp=$('ps-pct');   if(pp){ pp.textContent=pct+'%'; pp.style.color=c.hex; }
   const pf=$('detail-prog-fill'); if(pf){ pf.style.width=pct+'%'; pf.style.background=c.hex; }
+  const sub=$('detail-subtitle'); if(sub) sub.textContent = `${done} of ${total} tasks completed`;
+  const badge=$('detail-pct-badge'); if(badge){ badge.textContent = pct+'%'; badge.style.color=c.hex; }
 
   // Filter
   let tasks=[...list.tasks];
@@ -3783,7 +4020,8 @@ function renderBuys() {
 
   buys.forEach(buy=>{
     const isAfforded = allocatedBuyIds.has(buy.id);
-    const store = parseStore(buy.url);
+    const store = getBuyStore(buy);
+    const noteText = formatBuyNote(buy, store);
     const card=document.createElement('div');
     card.className=`buy-card${buy.bought?' bought-card':''}${isAfforded?' afforded':''}`;
     card.dataset.id=buy.id;
@@ -3799,19 +4037,31 @@ function renderBuys() {
       <button class="check-btn${buy.bought?' chk-done':''}" data-id="${esc(buy.id)}" aria-label="Toggle bought"></button>
       <div class="buy-body">
         <div class="buy-name">${esc(buy.name)}</div>
-        ${buy.note?`<div class="buy-note"><span class="buy-note-ico">📝</span> ${esc(buy.note)}</div>`:''}
+        ${noteText?`<div class="buy-note"><span class="buy-note-ico">📝</span> ${esc(noteText)}</div>`:''}
         <div class="buy-tags">
           <span class="cat-tag">${CAT_LABELS[buy.category]||'🎁 Other'}</span>
           <span class="ptag ptag-${buy.priority}">${buy.priority.charAt(0).toUpperCase()+buy.priority.slice(1)}</span>
           ${isAfforded?`<span class="afford-tag">✨ In Budget</span>`:''}
-          ${store ? `
-            <a href="${esc(store.url)}" target="_blank" rel="noopener noreferrer" class="store-pill ${store.brandCls}" title="Checkout on ${esc(store.label)}" onclick="event.stopPropagation();">
-              <span class="store-ico">${store.icon}</span>
-              <span class="store-name">${esc(store.label)}</span>
-              <svg class="store-arrow" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            </a>
-          ` : ''}
         </div>
+        ${store ? `
+          <div class="buy-store-row">
+            <button type="button" class="buy-store-btn ${store.brandCls}" data-url="${esc(store.url)}" title="Open product in ${esc(store.label)}">
+              <span class="store-badge-left">
+                <span class="store-ico">${store.icon}</span>
+                <span class="store-brand-text">${esc(store.label)}</span>
+              </span>
+              <span class="store-dest-text">${esc(store.domain)}</span>
+              <span class="store-open-action">
+                <span>Visit</span>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                  <polyline points="15 3 21 3 21 9"/>
+                  <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+              </span>
+            </button>
+          </div>
+        ` : ''}
       </div>
       <div class="buy-right">
         <span class="buy-price${!buy.price?' zero':''}">${buy.price>0?fmtR(buy.price):'—'}</span>
@@ -3830,6 +4080,11 @@ function renderBuys() {
   container.querySelectorAll('.check-btn').forEach(b=>b.addEventListener('click',()=>toggleBuy(b.dataset.id)));
   container.querySelectorAll('.edit-buy-btn').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openEditBuy(b.dataset.id);}));
   container.querySelectorAll('.del-buy-btn').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();deleteBuy(b.dataset.id);}));
+  container.querySelectorAll('.buy-store-btn').forEach(b=>b.addEventListener('click',e=>{
+    e.preventDefault();
+    e.stopPropagation();
+    openStoreUrl(b.dataset.url);
+  }));
 
   makeDraggable({
     container,
@@ -4149,6 +4404,29 @@ function fmtTimeAgo(ts) {
   return new Date(ts).toLocaleDateString('en-IN', { month:'short', day:'numeric' });
 }
 
+function openStoreUrl(rawUrl) {
+  if (!rawUrl) return;
+  let url = String(rawUrl).trim();
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = 'https://' + url;
+  }
+  vibe(45);
+
+  try {
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      try { document.body.removeChild(a); } catch (_) {}
+    }, 300);
+  } catch (_) {
+    window.location.assign(url);
+  }
+}
+
 function parseStore(rawUrl) {
   if (!rawUrl || typeof rawUrl !== 'string') return null;
   const s = rawUrl.trim();
@@ -4166,11 +4444,11 @@ function parseStore(rawUrl) {
     let icon = '🛍️';
     let brandCls = 'store-generic';
 
-    if (host.includes('amazon.')) {
+    if (host.includes('amazon.') || host === 'amzn.in' || host === 'amzn.to' || host === 'a.co') {
       label = 'Amazon';
       icon = '🛒';
       brandCls = 'store-amazon';
-    } else if (host.includes('flipkart.')) {
+    } else if (host.includes('flipkart.') || host.includes('fkrt.it')) {
       label = 'Flipkart';
       icon = '⚡';
       brandCls = 'store-flipkart';
@@ -4202,6 +4480,14 @@ function parseStore(rawUrl) {
       label = 'Tata CLiQ';
       icon = '🛍️';
       brandCls = 'store-generic';
+    } else if (host.includes('reliancedigital.')) {
+      label = 'Reliance';
+      icon = '⚡';
+      brandCls = 'store-generic';
+    } else if (host.includes('boat-lifestyle.')) {
+      label = 'boAt';
+      icon = '🎧';
+      brandCls = 'store-generic';
     } else {
       const parts = host.split('.');
       const mainPart = parts.length > 1 ? parts[0] : host;
@@ -4218,6 +4504,34 @@ function parseStore(rawUrl) {
   } catch (_) {
     return null;
   }
+}
+
+function getBuyStore(buy) {
+  if (buy.url) {
+    const s = parseStore(buy.url);
+    if (s) return s;
+  }
+  if (buy.note) {
+    const match = buy.note.match(/https?:\/\/[^\s]+/i);
+    if (match) {
+      const s = parseStore(match[0]);
+      if (s) return s;
+    }
+  }
+  return null;
+}
+
+function formatBuyNote(buy, store) {
+  if (!buy.note) return '';
+  let text = buy.note.trim();
+  if (store && store.url) {
+    if (text === store.url || text === store.url.replace(/^https?:\/\//, '')) {
+      return '';
+    }
+    text = text.replace(store.url, '').trim();
+  }
+  text = text.replace(/https?:\/\/[^\s]+/ig, '').trim();
+  return text;
 }
 
 function parseClipUrl(rawUrl) {
@@ -5029,10 +5343,12 @@ function bindAll() {
   $('btn-edit-list')?.addEventListener('click',()=>openEditList(currentListId));
   $('btn-del-list')?.addEventListener('click',()=>deleteList(currentListId));
   $('btn-new-task')?.addEventListener('click',openNewTask);
+  $('btn-empty-add-task')?.addEventListener('click',openNewTask);
 
   // Task filter tabs
   document.querySelectorAll('#view-detail [data-filter]').forEach(btn=>{
     btn.addEventListener('click',()=>{
+      vibe(30);
       taskFilter=btn.dataset.filter;
       document.querySelectorAll('#view-detail [data-filter]').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
